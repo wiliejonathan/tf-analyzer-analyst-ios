@@ -13510,7 +13510,7 @@ if (!wrap) return;
 const outer = document.querySelector('#section-history #drawdown-summary > .table-wrapper > .table-scroll.drawdown-noscroll') ||
   document.querySelector('#section-history #drawdown-summary .table-scroll.drawdown-noscroll');
 if (!outer) return;
-wrap.classList.add('drawdown-detail-wrap-v318', 'drawdown-detail-wrap-v321');
+wrap.classList.add('drawdown-detail-wrap-v318', 'drawdown-detail-wrap-v321', 'drawdown-detail-wrap-v352');
 const detailTable = wrap.querySelector('.drawdown-detail-table');
 
 // REV321 geometry is calculated from the actual position of parent header #3,
@@ -13527,11 +13527,31 @@ const applyGeometry = () => {
     const viewport = Math.max(96, outer.clientWidth - frozen);
     const leftPx = frozen.toFixed(3) + 'px';
     const viewportPx = viewport.toFixed(3) + 'px';
-    wrap.style.setProperty('position', 'sticky', 'important');
-    wrap.style.setProperty('left', leftPx, 'important');
-    wrap.style.setProperty('width', viewportPx, 'important');
-    wrap.style.setProperty('min-width', viewportPx, 'important');
-    wrap.style.setProperty('max-width', viewportPx, 'important');
+    const desktopWide = (window.innerWidth || document.documentElement.clientWidth || 0) >= 1024;
+
+    // REV352: on desktop/browser the main table fills the complete card.
+    // Expanded detail is therefore laid out *after* the two identity columns
+    // using a real margin, instead of mobile sticky-left geometry. Sticky-left
+    // is correct for a horizontally scrolling phone table but makes the detail
+    // row appear shifted to the left when there is no desktop overflow.
+    if (desktopWide) {
+      wrap.style.setProperty('position', 'relative', 'important');
+      wrap.style.setProperty('left', 'auto', 'important');
+      wrap.style.setProperty('margin-left', leftPx, 'important');
+      wrap.style.setProperty('width', viewportPx, 'important');
+      wrap.style.setProperty('min-width', viewportPx, 'important');
+      wrap.style.setProperty('max-width', viewportPx, 'important');
+      wrap.style.setProperty('overflow-x', 'hidden', 'important');
+      wrap.scrollLeft = 0;
+    } else {
+      wrap.style.setProperty('position', 'sticky', 'important');
+      wrap.style.setProperty('left', leftPx, 'important');
+      wrap.style.setProperty('margin-left', '0px', 'important');
+      wrap.style.setProperty('width', viewportPx, 'important');
+      wrap.style.setProperty('min-width', viewportPx, 'important');
+      wrap.style.setProperty('max-width', viewportPx, 'important');
+      wrap.style.setProperty('overflow-x', 'auto', 'important');
+    }
     wrap.style.setProperty('--tf-dd-frozen-width', leftPx);
   } catch (e) { }
 };
@@ -13572,12 +13592,26 @@ if (!outer.__tfDdOuterSyncBoundV321) {
           const thirdRect = ths[2].getBoundingClientRect();
           const frozen = Math.max(0, (thirdRect.left - outRect.left) + (out.scrollLeft || 0));
           const viewport = Math.max(96, out.clientWidth - frozen);
-          w.style.setProperty('left', frozen.toFixed(3) + 'px', 'important');
-          w.style.setProperty('width', viewport.toFixed(3) + 'px', 'important');
-          w.style.setProperty('min-width', viewport.toFixed(3) + 'px', 'important');
-          w.style.setProperty('max-width', viewport.toFixed(3) + 'px', 'important');
-          const max = Math.max(0, w.scrollWidth - w.clientWidth);
-          w.scrollLeft = Math.max(0, Math.min(out.scrollLeft || 0, max));
+          const frozenPx = frozen.toFixed(3) + 'px';
+          const viewportPx = viewport.toFixed(3) + 'px';
+          const desktopWide = (window.innerWidth || document.documentElement.clientWidth || 0) >= 1024;
+          if (desktopWide) {
+            w.style.setProperty('position', 'relative', 'important');
+            w.style.setProperty('left', 'auto', 'important');
+            w.style.setProperty('margin-left', frozenPx, 'important');
+            w.style.setProperty('overflow-x', 'hidden', 'important');
+            w.scrollLeft = 0;
+          } else {
+            w.style.setProperty('position', 'sticky', 'important');
+            w.style.setProperty('left', frozenPx, 'important');
+            w.style.setProperty('margin-left', '0px', 'important');
+            w.style.setProperty('overflow-x', 'auto', 'important');
+            const max = Math.max(0, w.scrollWidth - w.clientWidth);
+            w.scrollLeft = Math.max(0, Math.min(out.scrollLeft || 0, max));
+          }
+          w.style.setProperty('width', viewportPx, 'important');
+          w.style.setProperty('min-width', viewportPx, 'important');
+          w.style.setProperty('max-width', viewportPx, 'important');
         } catch (e) { }
       });
     }, { passive:true });
@@ -13589,7 +13623,7 @@ wrap.scrollLeft = Math.max(0, Math.min(outer.scrollLeft || 0, initialMax));
 }
 function tf_buildDrawdownDetailElement(st) {
 const wrap = document.createElement('div');
-wrap.className = 'drawdown-detail-wrap drawdown-detail-wrap-v317 drawdown-detail-wrap-v318';
+wrap.className = 'drawdown-detail-wrap drawdown-detail-wrap-v317 drawdown-detail-wrap-v318 drawdown-detail-wrap-v352';
 const maxP = st && st.maxProfitTrades ? st.maxProfitTrades : 0;
 const maxL = st && st.maxLossTrades ? st.maxLossTrades : 0;
 const maxN = Math.max(maxP, maxL);

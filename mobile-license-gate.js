@@ -5,11 +5,11 @@
   const LICENSE_WATCH_MS = 5000;
   const AUTH_KEY = 'tfMobileRememberedLicenseV351';
   const APP_SCRIPTS = [
-    'mobile-chrome-shim.js?rev=351',
-    'assets/dashboard-mobile.js?rev=351',
-    'mobile-data-bridge.js?rev=351',
-    'mobile-app-shell.js?rev=351',
-    'mobile-remote.js?rev=351'
+    'mobile-chrome-shim.js?rev=352',
+    'assets/dashboard-mobile.js?rev=352',
+    'mobile-data-bridge.js?rev=352',
+    'mobile-app-shell.js?rev=352',
+    'mobile-remote.js?rev=352'
   ];
 
   let appStarted = false;
@@ -47,7 +47,7 @@
         signal: controller ? controller.signal : undefined,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...(body || {}), deviceType: 'MOBILE', clientType: 'MOBILE',
-          mobilePlatform: platformName(), mobileVersion: '1.0.108', remoteRevision: 'REV351',
+          mobilePlatform: platformName(), mobileVersion: '1.0.108', remoteRevision: 'REV352',
           requestNonce: String(Date.now()) + '-' + Math.random().toString(36).slice(2) })
       });
       const text = await response.text();
@@ -183,7 +183,7 @@
       }
       if (root) root.remove();
       startLicenseWatch();
-      setTimeout(() => { try { if (typeof window.tfMobileRecoverRenderV31 === 'function') window.tfMobileRecoverRenderV31('token-gate-rev351'); } catch (_) {} }, 400);
+      setTimeout(() => { try { if (typeof window.tfMobileRecoverRenderV31 === 'function') window.tfMobileRecoverRenderV31('token-gate-rev352'); } catch (_) {} }, 400);
     } catch (error) {
       appStarted = false;
       if (root) root.classList.remove('tf-license-leaving');

@@ -9106,3 +9106,97 @@ html,body.tf-mobile-app,#tf-dashboard-main.page,.tf-mobile-screen{
     font-size:6.8px!important;
   }
 }
+
+
+/* ==========================================================================
+   REV352 — WEB/iOS DESKTOP DRAWDOWN RESPONSIVE WIDTH + EXPAND ALIGNMENT
+   - Phone/mobile behavior is intentionally unchanged.
+   - On desktop, Drawdown & Consecutive Stats fills the available card width.
+   - Expanded streak rows start exactly after Arrow + Nama Analis and use the
+     complete remaining width, so they no longer slide to the left.
+   ========================================================================== */
+@media (min-width:1024px){
+  #section-history #drawdown-summary,
+  #section-history #drawdown-summary > .table-wrapper,
+  #section-history #drawdown-summary > .table-wrapper > .table-scroll.drawdown-noscroll{
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    box-sizing:border-box!important;
+  }
+
+  #section-history #drawdown-summary > .table-wrapper{
+    overflow:visible!important;
+  }
+
+  #section-history #drawdown-summary > .table-wrapper > .table-scroll.drawdown-noscroll{
+    overflow-x:hidden!important;
+    overflow-y:visible!important;
+    touch-action:auto!important;
+    -webkit-overflow-scrolling:auto!important;
+  }
+
+  #section-history #drawdown-table{
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    table-layout:fixed!important;
+    border-collapse:separate!important;
+    border-spacing:0!important;
+  }
+
+  /* Keep the two identity columns compact. The eight metric columns share all
+     remaining space automatically through fixed table layout. */
+  #section-history #drawdown-table > thead > tr > th:first-child,
+  #section-history #drawdown-table > tbody > tr:not(.dd-child-row) > td:first-child{
+    width:42px!important;
+    min-width:42px!important;
+    max-width:42px!important;
+  }
+  #section-history #drawdown-table > thead > tr > th:nth-child(2),
+  #section-history #drawdown-table > tbody > tr:not(.dd-child-row) > td:nth-child(2){
+    width:200px!important;
+    min-width:200px!important;
+    max-width:200px!important;
+  }
+  #section-history #drawdown-table > thead > tr > th:nth-child(n+3),
+  #section-history #drawdown-table > tbody > tr:not(.dd-child-row) > td:nth-child(n+3){
+    width:auto!important;
+    min-width:0!important;
+    max-width:none!important;
+  }
+  #section-history #drawdown-table > thead > tr > th:nth-child(n+3){
+    white-space:normal!important;
+    overflow-wrap:normal!important;
+    word-break:normal!important;
+    padding-left:8px!important;
+    padding-right:8px!important;
+  }
+  #section-history #drawdown-table > tbody > tr:not(.dd-child-row) > td:nth-child(n+3){
+    white-space:nowrap!important;
+    padding-left:8px!important;
+    padding-right:8px!important;
+  }
+
+  /* A colspan child must represent the whole parent table, not inherit the
+     legacy first-column 42px rule. JS REV352 then gives its inner wrapper the
+     exact margin/width measured from the rendered parent header. */
+  #section-history #drawdown-table > tbody > tr.dd-child-row > td{
+    position:static!important;
+    left:auto!important;
+    width:auto!important;
+    min-width:0!important;
+    max-width:none!important;
+    padding:0!important;
+    overflow:visible!important;
+  }
+  #section-history #drawdown-table .drawdown-detail-wrap-v352{
+    box-sizing:border-box!important;
+    padding:6px 0!important;
+    overflow-y:hidden!important;
+  }
+  #section-history #drawdown-table .drawdown-detail-table{
+    margin:0!important;
+    border-spacing:0!important;
+  }
+}
