@@ -9107,96 +9107,79 @@ html,body.tf-mobile-app,#tf-dashboard-main.page,.tf-mobile-screen{
   }
 }
 
-
-/* ==========================================================================
-   REV352 — WEB/iOS DESKTOP DRAWDOWN RESPONSIVE WIDTH + EXPAND ALIGNMENT
-   - Phone/mobile behavior is intentionally unchanged.
-   - On desktop, Drawdown & Consecutive Stats fills the available card width.
-   - Expanded streak rows start exactly after Arrow + Nama Analis and use the
-     complete remaining width, so they no longer slide to the left.
-   ========================================================================== */
-@media (min-width:1024px){
-  #section-history #drawdown-summary,
-  #section-history #drawdown-summary > .table-wrapper,
-  #section-history #drawdown-summary > .table-wrapper > .table-scroll.drawdown-noscroll{
-    width:100%!important;
-    max-width:100%!important;
-    min-width:0!important;
-    box-sizing:border-box!important;
-  }
-
-  #section-history #drawdown-summary > .table-wrapper{
-    overflow:visible!important;
-  }
-
-  #section-history #drawdown-summary > .table-wrapper > .table-scroll.drawdown-noscroll{
-    overflow-x:hidden!important;
-    overflow-y:visible!important;
-    touch-action:auto!important;
-    -webkit-overflow-scrolling:auto!important;
-  }
-
-  #section-history #drawdown-table{
-    width:100%!important;
-    min-width:0!important;
-    max-width:100%!important;
-    table-layout:fixed!important;
-    border-collapse:separate!important;
-    border-spacing:0!important;
-  }
-
-  /* Keep the two identity columns compact. The eight metric columns share all
-     remaining space automatically through fixed table layout. */
-  #section-history #drawdown-table > thead > tr > th:first-child,
-  #section-history #drawdown-table > tbody > tr:not(.dd-child-row) > td:first-child{
-    width:42px!important;
-    min-width:42px!important;
-    max-width:42px!important;
-  }
-  #section-history #drawdown-table > thead > tr > th:nth-child(2),
-  #section-history #drawdown-table > tbody > tr:not(.dd-child-row) > td:nth-child(2){
-    width:200px!important;
-    min-width:200px!important;
-    max-width:200px!important;
-  }
-  #section-history #drawdown-table > thead > tr > th:nth-child(n+3),
-  #section-history #drawdown-table > tbody > tr:not(.dd-child-row) > td:nth-child(n+3){
-    width:auto!important;
-    min-width:0!important;
-    max-width:none!important;
-  }
-  #section-history #drawdown-table > thead > tr > th:nth-child(n+3){
-    white-space:normal!important;
-    overflow-wrap:normal!important;
-    word-break:normal!important;
-    padding-left:8px!important;
-    padding-right:8px!important;
-  }
-  #section-history #drawdown-table > tbody > tr:not(.dd-child-row) > td:nth-child(n+3){
-    white-space:nowrap!important;
-    padding-left:8px!important;
-    padding-right:8px!important;
-  }
-
-  /* A colspan child must represent the whole parent table, not inherit the
-     legacy first-column 42px rule. JS REV352 then gives its inner wrapper the
-     exact margin/width measured from the rendered parent header. */
-  #section-history #drawdown-table > tbody > tr.dd-child-row > td{
-    position:static!important;
-    left:auto!important;
-    width:auto!important;
-    min-width:0!important;
-    max-width:none!important;
-    padding:0!important;
-    overflow:visible!important;
-  }
-  #section-history #drawdown-table .drawdown-detail-wrap-v352{
-    box-sizing:border-box!important;
-    padding:6px 0!important;
-    overflow-y:hidden!important;
-  }
-  #section-history #drawdown-table .drawdown-detail-table{
-    margin:0!important;
-    border-spacing:0!important;
-  }
+/* ============================================================
+   REV352 - REMEMBERED ACTIVATION: LOADING-ONLY RETURN LAUNCH
+   ============================================================ */
+#tf-mobile-license-gate.tf-license-loading-only{
+  overflow:hidden!important;
+  padding:24px!important;
+}
+#tf-mobile-license-gate .tf-license-loading-card{
+  width:min(100%,320px)!important;
+  min-height:250px!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  padding:28px 24px!important;
+  border-radius:24px!important;
+  background:linear-gradient(180deg,rgba(15,23,42,.98),rgba(8,18,36,.98))!important;
+  border:1px solid rgba(56,189,248,.18)!important;
+  box-shadow:0 24px 80px rgba(0,0,0,.48)!important;
+  color:#e5edf8!important;
+  text-align:center!important;
+}
+#tf-mobile-license-gate .tf-license-loading-logo{
+  width:66px!important;
+  height:66px!important;
+  display:grid!important;
+  place-items:center!important;
+  margin:0 auto 22px!important;
+  border-radius:20px!important;
+  background:rgba(56,189,248,.07)!important;
+  border:1px solid rgba(56,189,248,.16)!important;
+  box-shadow:0 10px 32px rgba(14,165,233,.12)!important;
+}
+#tf-mobile-license-gate .tf-license-loading-logo img{
+  width:48px!important;
+  height:48px!important;
+  border-radius:14px!important;
+  object-fit:cover!important;
+}
+#tf-mobile-license-gate .tf-license-spinner{
+  width:48px!important;
+  height:18px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:7px!important;
+  margin:0 auto 18px!important;
+}
+#tf-mobile-license-gate .tf-license-spinner span{
+  width:8px!important;
+  height:8px!important;
+  border-radius:999px!important;
+  background:#38bdf8!important;
+  box-shadow:0 0 14px rgba(56,189,248,.45)!important;
+  animation:tfLicensePulse352 1s ease-in-out infinite!important;
+}
+#tf-mobile-license-gate .tf-license-spinner span:nth-child(2){animation-delay:.14s!important}
+#tf-mobile-license-gate .tf-license-spinner span:nth-child(3){animation-delay:.28s!important}
+#tf-mobile-license-gate .tf-license-loading-title{
+  font-size:18px!important;
+  line-height:23px!important;
+  font-weight:900!important;
+  color:#fff!important;
+  letter-spacing:-.01em!important;
+}
+#tf-mobile-license-gate .tf-license-loading-status{
+  margin-top:8px!important;
+  color:#8ca2bd!important;
+  font-size:11px!important;
+  line-height:16px!important;
+  font-weight:700!important;
+}
+@keyframes tfLicensePulse352{
+  0%,100%{transform:translateY(0) scale(.72);opacity:.35}
+  50%{transform:translateY(-5px) scale(1);opacity:1}
 }

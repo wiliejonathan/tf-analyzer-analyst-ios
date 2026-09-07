@@ -439,7 +439,7 @@
     const ctl=typeof AbortController==='function'?new AbortController():null;if(ctl)tfRev294ApiControllers.add(ctl);
     const t=setTimeout(()=>{try{ctl&&ctl.abort();}catch(_){}},Math.max(3000,Number(timeoutOverrideMs)||REQUEST_TIMEOUT_MS));
     try{
-      const r=await fetch(API+path,{method:'POST',cache:'no-store',signal:ctl?ctl.signal:undefined,headers:{'Content-Type':'application/json'},body:JSON.stringify({...a,...body,deviceType:'MOBILE',clientType:'MOBILE',mobileVersion:'1.0.106',remoteRevision:'REV349'})});
+      const r=await fetch(API+path,{method:'POST',cache:'no-store',signal:ctl?ctl.signal:undefined,headers:{'Content-Type':'application/json'},body:JSON.stringify({...a,...body,deviceType:'MOBILE',clientType:'MOBILE',mobileVersion:'1.0.110',remoteRevision:'REV368'})});
       const text=await r.text();let data;
       try{data=JSON.parse(text);}catch(_){throw new Error('Respons Remote bukan JSON.');}
       if(data&&data.valid===false)throw new Error(data.message||data.code||'Remote tidak tersedia.');
@@ -454,7 +454,7 @@
 
   function fastWsUrl(ticket){return API.replace(/^http:/i,'ws:').replace(/^https:/i,'wss:')+'/remote/fast-ws?ticket='+encodeURIComponent(ticket);}
   function sendMobileUiPresence(open){if(!fastSocketOpen())return false;try{fastWs.send(JSON.stringify({type:'mobile_ui_presence',open:open===true,at:Date.now()}));return true;}catch(_){return false;}}
-  function syncMobilePresenceLoop(){if(mobilePresenceTimer){clearInterval(mobilePresenceTimer);mobilePresenceTimer=null;}if(opened){sendMobileUiPresence(true);mobilePresenceTimer=setInterval(()=>{if(opened)sendMobileUiPresence(true);},1000);}else sendMobileUiPresence(false);}
+  function syncMobilePresenceLoop(){if(mobilePresenceTimer){clearInterval(mobilePresenceTimer);mobilePresenceTimer=null;}sendMobileUiPresence(opened===true);}
   function fastSocketOpen(){return !!(fastWs&&fastWs.readyState===WebSocket.OPEN&&fastReady);}
   function directSocketOpen(){return !!(directDc&&directDc.readyState==='open'&&directReady);}
   function realtimeOpen(){return directSocketOpen()||fastSocketOpen();}
@@ -529,8 +529,8 @@
   }
   function bindDirectChannel(dc){
     if(!dc)return;directDc=dc;dc.binaryType='arraybuffer';
-    dc.onopen=()=>{directReady=true;directConnecting=false;if(directHeartbeatTimer)clearInterval(directHeartbeatTimer);directHeartbeatTimer=setInterval(()=>{if(directSocketOpen())directSend({type:'ping',at:Date.now()});},1000);if(directStatsTimer)clearInterval(directStatsTimer);directStatsTimer=setInterval(()=>void updateDirectStats(),2500);try{directSend({type:'snapshot_request',at:Date.now()});directSend({type:'ping',at:Date.now()});}catch(_){}void updateDirectStats();render(lastStatus||{});logEvent('DataChannel realtime aktif — P2P/TURN dipilih otomatis.','ok');};
-    dc.onmessage=e=>{let msg;try{msg=JSON.parse(String(e.data||''));}catch(_){return;}handleRealtimeMessage(msg,'direct');};
+    dc.onopen=()=>{directReady=true;directConnecting=false;if(directHeartbeatTimer)clearInterval(directHeartbeatTimer);directHeartbeatTimer=setInterval(()=>{if(directSocketOpen())directSend({type:'ping',at:Date.now()});},10000);if(directStatsTimer)clearInterval(directStatsTimer);directStatsTimer=setInterval(()=>void updateDirectStats(),10000);try{directSend({type:'snapshot_request',at:Date.now()});directSend({type:'ping',at:Date.now()});}catch(_){}void updateDirectStats();render(lastStatus||{});logEvent('DataChannel realtime aktif — P2P/TURN dipilih otomatis.','ok');};
+    dc.onmessage=e=>{const raw=String(e.data||'');if(raw==='TF_PONG')return;let msg;try{msg=JSON.parse(raw);}catch(_){return;}handleRealtimeMessage(msg,'direct');};
     dc.onclose=()=>{if(directDc===dc){directReady=false;directDc=null;render(lastStatus||{});if(opened&&fastSocketOpen())closeDirectPeer(true);}};dc.onerror=()=>{};
   }
   async function startDirectPeer(){
@@ -594,13 +594,13 @@
       ws.onopen=()=>{
         openedOk=true;clearTimeout(guard);fastConnecting=false;fastReady=true;
         if(fastHeartbeatTimer)clearInterval(fastHeartbeatTimer);
-        fastHeartbeatTimer=setInterval(()=>{try{if(fastSocketOpen())ws.send(JSON.stringify({type:'ping',role:'MOBILE',live:true,at:Date.now()}));}catch(_){}},1000);
+        fastHeartbeatTimer=setInterval(()=>{try{if(fastSocketOpen())ws.send('TF_PING');}catch(_){}},30000);
         try{ws.send(JSON.stringify({type:'snapshot_request',at:Date.now()}));}catch(_){}
         syncMobilePresenceLoop();
         try{render(lastStatus||{});}catch(_){}
       };
       ws.onmessage=e=>{
-        let msg;try{msg=JSON.parse(String(e.data||''));}catch(_){return;}
+        const raw=String(e.data||'');if(raw==='TF_PONG')return;let msg;try{msg=JSON.parse(raw);}catch(_){return;}
         if(msg.type==='mobile_conflict'){
           mobileConflictPending=true;mobileConflictBlocked=false;closeDirectPeer(false);showMobileConflict('conflict',msg);return;
         }
@@ -2215,7 +2215,7 @@
   function disconnectRemotePresence(){
     const a=auth();if(!a)return;
     try{
-      fetch(API+'/remote/mobile-disconnect',{method:'POST',cache:'no-store',keepalive:true,headers:{'Content-Type':'application/json'},body:JSON.stringify({...a,deviceType:'MOBILE',clientType:'MOBILE',mobileVersion:'1.0.106',remoteRevision:'REV349'})}).catch(()=>{});
+      fetch(API+'/remote/mobile-disconnect',{method:'POST',cache:'no-store',keepalive:true,headers:{'Content-Type':'application/json'},body:JSON.stringify({...a,deviceType:'MOBILE',clientType:'MOBILE',mobileVersion:'1.0.110',remoteRevision:'REV368'})}).catch(()=>{});
     }catch(_){}
   }
   function nextPollDelay(){return realtimeOpen()?POLL_FAST_MS:(lastStatus&&lastStatus.desktopOnline?POLL_ONLINE_MS:POLL_OFFLINE_MS);}

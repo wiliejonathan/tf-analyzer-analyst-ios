@@ -1,21 +1,21 @@
-const CACHE='tf-analyzer-analyst-mobile-v147-rev352-desktop-drawdown-responsive';
+const CACHE='tf-analyzer-analyst-mobile-v148-rev368-low-usage-unified';
 const ASSETS=[
-  './assets/dashboard-mobile.js?rev=352',
-  './assets/dashboard-original.css?rev=352',
+  './assets/dashboard-mobile.js?rev=368',
+  './assets/dashboard-original.css?rev=368',
   './icon32.png',
   './icons/icon-180.png',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './index.html',
   './manifest.webmanifest',
-  './mobile-app-shell.js?rev=352',
-  './mobile-remote.js?rev=352',
-  './mobile-chrome-shim.js?rev=352',
-  './mobile-data-bridge.js?rev=352',
-  './mobile-force-update.js?rev=352',
-  './mobile-license-gate.js?rev=352',
-  './mobile-import-fix-v30.js?rev=352',
-  './mobile-overrides.css?rev=352'
+  './mobile-app-shell.js?rev=368',
+  './mobile-remote.js?rev=368',
+  './mobile-chrome-shim.js?rev=368',
+  './mobile-data-bridge.js?rev=368',
+  './mobile-force-update.js?rev=368',
+  './mobile-license-gate.js?rev=368',
+  './mobile-import-fix-v30.js?rev=368',
+  './mobile-overrides.css?rev=368'
 ];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
@@ -61,6 +61,8 @@ self.addEventListener('notificationclick', event => {
 
 // REV347: Touch tooltip is offset from the finger; desktop mouse behavior is unchanged.
 
-// REV352: remember Email+Token only; verify server before dashboard; live revocation; fresh dashboard/import data every launch.
+// REV349: strict activation on every fresh launch, live license revocation, no persisted TF user/session/import data.
 
-// REV352: desktop Drawdown table fills its card; expanded detail aligns after the two identity columns.
+// REV352: remembered activation opens from local confirmed authorization; silent server refresh; timeout-safe boot; activation form only for first activation or explicit revocation.
+
+// REV368: mobile package aligned with PC REV368; Remote Update errors are surfaced from the PC strict login preflight.
