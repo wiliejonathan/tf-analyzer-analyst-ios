@@ -65,7 +65,7 @@ jobs:
             'tf_getHistoryNetPnlDollar','tf_getHistoryNetPnlPercent','getRiskPercentForAnalyst',
             'computeLot','roundLotToTwoDecimals','computeFixedLot',
             'tf_getCompoundBaseBalanceForMonth','tf_recomputeBalancesSkippingDisabled',
-            'recomputeHistoryRows','tf_updateStreakStateFixedLot','computeAndRenderDrawdownStats'
+            'tf_updateStreakStateFixedLot','computeAndRenderDrawdownStats'
           ]
           def extract(src,name):
               m=re.search(r'function\s+'+re.escape(name)+r'\s*\(',src)
@@ -105,7 +105,23 @@ jobs:
               if not a or not b or a!=b:
                   bad.append(name)
           assert not bad, 'Calculation parity mismatch: '+', '.join(bad)
-          print('PC REV379 calculation parity PASS:',len(names),'functions; asset',pc_path.name)
+          # recomputeHistoryRows intentionally has a Mobile-only chunked DOM renderer.
+          # Validate its calculation orchestration invariants instead of requiring
+          # Desktop rendering code to be byte-identical.
+          mh=extract(mobile,'recomputeHistoryRows') or ''
+          ph=extract(pc,'recomputeHistoryRows') or ''
+          calc_invariants=[
+              'tf_recomputeBalancesSkippingDisabled',
+              'tf_getCompoundBaseBalanceForMonth',
+              'computeFixedLot',
+              'computeLot',
+              'tf_buildTradeCostFields',
+              'tf_getHistoryRowsForUiAndExport',
+              'tf_renderAnalystPerformanceTablesFromRows'
+          ]
+          for token in calc_invariants:
+              assert token in mh and token in ph, 'recomputeHistoryRows invariant missing: '+token
+          print('PC REV379 calculation parity PASS:',len(names),'strict functions + recomputeHistoryRows orchestration; asset',pc_path.name)
           PY
       - name: Validate bridge identity against PC combine semantics
         run: |
