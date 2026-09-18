@@ -407,8 +407,13 @@ function historyKey(it){
   }catch(e){return"";}
 }
 function completeness(it){
+  // REV380: match the PC combine/import precedence exactly. Extra Mobile-only
+  // bookkeeping fields must never make a less-complete duplicate win.
   if(!it||typeof it!=="object")return 0;
-  let n=0;Object.keys(it).forEach(k=>{const v=it[k];if(v!==null&&v!==undefined&&String(v).trim()!=="")n++;});return n;
+  const keys=["entry","takeProfit","stopLoss","type","createdDate","displayDate","signalId","expiredDate"];
+  let n=0;
+  keys.forEach(k=>{const v=it[k];if(v!==null&&v!==undefined&&String(v).trim()!==""&&String(v).trim()!=="-")n++;});
+  return n;
 }
 function mergeHistory(a,b){
   const map=new Map();
@@ -518,14 +523,43 @@ function tfMobileBuildSourcesFromHistoryV31(history,existing){
 }
 function tfMobileNormalizeStorageV31(input){
   const st=input&&typeof input==='object'?clone(input,{}):{};
-  const historyCandidate=st.tfHistorySignals??st.historySignals??st.tfHistory??st.history??st.signals;
-  const history=tfMobileNormalizeHistoryV31(historyCandidate);
-  st.tfHistorySignals=history;
-  st.tfAnalystSources=tfMobileBuildSourcesFromHistoryV31(history,st.tfAnalystSources??st.analystSources);
-  st.tfMonthlyStats=(st.tfMonthlyStats&&typeof st.tfMonthlyStats==='object')?st.tfMonthlyStats:{};
-  st.tfScoreHistory=tfMobileArrayV31(st.tfScoreHistory??st.scoreHistory);
-  st.tfNoDataPairs=(st.tfNoDataPairs&&typeof st.tfNoDataPairs==='object')?st.tfNoDataPairs:{};
-  st.tfAvgSlPips=(st.tfAvgSlPips&&typeof st.tfAvgSlPips==='object')?st.tfAvgSlPips:{};
+
+  // REV380 CALCULATION PARITY:
+  // A canonical PC export/Remote bundle already contains the exact rows used by
+  // Desktop. Do NOT coerce, alias, enrich, re-index, uppercase, or filter those
+  // rows. Mobile compatibility normalization is only for legacy/non-PC files.
+  const hasCanonicalPcHistory=Array.isArray(st.tfHistorySignals);
+  const legacyHistoryCandidate=st.historySignals??st.tfHistory??st.history??st.signals;
+  const history=hasCanonicalPcHistory
+    ? clone(st.tfHistorySignals,st.tfHistorySignals.slice())
+    : tfMobileNormalizeHistoryV31(legacyHistoryCandidate);
+  st.tfHistorySignals=Array.isArray(history)?history:[];
+
+  const hasCanonicalSources=!!(
+    st.tfAnalystSources &&
+    typeof st.tfAnalystSources==='object' &&
+    !Array.isArray(st.tfAnalystSources)
+  );
+  st.tfAnalystSources=hasCanonicalSources
+    ? clone(st.tfAnalystSources,st.tfAnalystSources)
+    : tfMobileBuildSourcesFromHistoryV31(st.tfHistorySignals,st.analystSources);
+
+  st.tfMonthlyStats=(st.tfMonthlyStats&&typeof st.tfMonthlyStats==='object'&&!Array.isArray(st.tfMonthlyStats))
+    ? st.tfMonthlyStats
+    : {};
+  st.tfScoreHistory=Array.isArray(st.tfScoreHistory)
+    ? clone(st.tfScoreHistory,st.tfScoreHistory.slice())
+    : tfMobileArrayV31(st.scoreHistory);
+  st.tfNoDataPairs=(st.tfNoDataPairs&&typeof st.tfNoDataPairs==='object'&&!Array.isArray(st.tfNoDataPairs))
+    ? st.tfNoDataPairs
+    : {};
+  st.tfAvgSlPips=(st.tfAvgSlPips&&typeof st.tfAvgSlPips==='object'&&!Array.isArray(st.tfAvgSlPips))
+    ? st.tfAvgSlPips
+    : {};
+
+  // Any additional canonical PC storage keys (including REV380
+  // tfMyfxbookPrices/tfMyfxbookPricesAt) remain untouched in st and are written
+  // to Mobile storage by applyPayload().
   return st;
 }
 async function tfMobileReadBackV31(){
