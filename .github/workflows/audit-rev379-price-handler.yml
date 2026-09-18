@@ -1,0 +1,48 @@
+name: Audit REV379 ensure price handler
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'release-staging/REV381-price-handler-audit/READY'
+permissions:
+  contents: write
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract exact ensure_myfxbook_prices handler
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/pc379 && mkdir -p /tmp/pc379/ext
+          gh release download v1.16.92 --repo wiliejonathan/tf-multi-analyst-releases --pattern 'TF_Extension_PC_MAC_REV379_DOM_LOGOUT_SIDEBAR_LOGIN_FIX.zip' --output /tmp/pc379/pc.zip
+          unzip -q /tmp/pc379/pc.zip -d /tmp/pc379/ext
+          mkdir -p audit
+          python3 - <<'PY'
+          from pathlib import Path
+          out=['# REV379 ensure_myfxbook_prices exact handler','']
+          for p in Path('/tmp/pc379/ext').rglob('*.js'):
+              s=p.read_text(errors='ignore')
+              needle='ensure_myfxbook_prices'
+              poss=[]; start=0
+              while True:
+                  i=s.find(needle,start)
+                  if i<0: break
+                  poss.append(i); start=i+len(needle)
+              if not poss: continue
+              out += ['## '+str(p.relative_to(Path('/tmp/pc379/ext'))),'- hits: '+str(len(poss))]
+              for n,i in enumerate(poss,1):
+                  a=max(0,i-3500); b=min(len(s),i+8000)
+                  out += ['',f'### hit {n}','~~~js',s[a:b],'~~~']
+          Path('audit/REV379_PRICE_HANDLER_EXACT.md').write_text('\n'.join(out)+'\n',encoding='utf-8')
+          PY
+          wc -c audit/REV379_PRICE_HANDLER_EXACT.md
+      - name: Commit audit
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add audit/REV379_PRICE_HANDLER_EXACT.md
+          git commit -m 'Extract REV379 price handler exact snippets' || exit 0
+          git push origin HEAD:main
