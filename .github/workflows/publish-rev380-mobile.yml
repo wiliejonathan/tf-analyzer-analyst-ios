@@ -1,0 +1,85 @@
+name: Publish iOS Browser REV380 calculation parity
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'release-staging/REV380-mobile/READY'
+permissions:
+  contents: write
+concurrency:
+  group: publish-mobile-rev380
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate REV380 Mobile source
+        run: |
+          set -euo pipefail
+          node --check assets/dashboard-mobile.js
+          node --check mobile-data-bridge.js
+          node --check mobile-remote.js
+          node --check mobile-force-update.js
+          node --check service-worker.js
+          python3 - <<'PY'
+          from pathlib import Path
+          b=Path('mobile-data-bridge.js').read_text()
+          i=Path('index.html').read_text()
+          sw=Path('service-worker.js').read_text()
+          assert 'const hasCanonicalPcHistory=Array.isArray(st.tfHistorySignals);' in b
+          assert '? clone(st.tfHistorySignals,st.tfHistorySignals.slice())' in b
+          assert 'tfMobileNormalizeHistoryV31(legacyHistoryCandidate)' in b
+          assert 'const keys=["entry","takeProfit","stopLoss","type","createdDate","displayDate","signalId","expiredDate"];' in b
+          assert 'tfMyfxbookPrices/tfMyfxbookPricesAt' in b
+          assert '?rev=380' in i and '?rev=372' not in i
+          assert 'rev380-calculation-parity' in sw and '?rev=380' in sw
+          print('REV380 Mobile static validation PASS')
+          PY
+      - name: Verify PC REV380 release carries price snapshot keys
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/pc380 && mkdir -p /tmp/pc380/ext
+          gh release download v1.16.93 --repo wiliejonathan/tf-multi-analyst-releases --pattern 'TF_Extension_PC_MAC_REV380_MOBILE_CALC_PARITY.zip' --output /tmp/pc380/pc.zip
+          unzip -q /tmp/pc380/pc.zip -d /tmp/pc380/ext
+          python3 - <<'PY'
+          from pathlib import Path
+          hits=[]
+          for p in Path('/tmp/pc380/ext/assets').glob('*.js'):
+              s=p.read_text(errors='ignore')
+              if 'const TF_EXPORT_STORAGE_KEYS' in s and 'tf_multi_analyst_export_v1' in s:
+                  hits.append(s)
+          assert len(hits)==1
+          s=hits[0]
+          block=s[s.index('const TF_EXPORT_STORAGE_KEYS'):s.index('const TF_TIME_RANGE_LABELS')]
+          assert 'TF_MYFXBOOK_PRICES_KEY' in block
+          assert 'TF_MYFXBOOK_PRICES_AT_KEY' in block
+          print('PC REV380 price snapshot export PASS')
+          PY
+      - name: Build iOS Browser bundle
+        run: |
+          set -euo pipefail
+          source release-staging/REV380-mobile/release.env
+          rm -f "/tmp/$ASSET" "/tmp/$ASSET.sha256"
+          zip -qr "/tmp/$ASSET" . -x '.git/*' '.github/*' 'release-staging/*' 'audit/*'
+          unzip -t "/tmp/$ASSET" >/dev/null
+          SHA=$(sha256sum "/tmp/$ASSET" | awk '{print $1}')
+          printf '%s  %s\n' "$SHA" "$ASSET" > "/tmp/$ASSET.sha256"
+          echo "MOBILE_SHA256=$SHA" >> "$GITHUB_ENV"
+      - name: Publish iOS Browser release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          source release-staging/REV380-mobile/release.env
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists; refusing to overwrite."
+            exit 1
+          fi
+          gh release create "$TAG" "/tmp/$ASSET" "/tmp/$ASSET.sha256"             --target "$GITHUB_SHA" --title "$TITLE"             --notes-file release-staging/REV380-mobile/RELEASE_NOTES.md --latest
+          echo "Published $TAG SHA256=$MOBILE_SHA256"
