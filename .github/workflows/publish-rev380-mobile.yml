@@ -57,8 +57,8 @@ jobs:
           assert len(hits)==1
           s=hits[0]
           block=s[s.index('const TF_EXPORT_STORAGE_KEYS'):s.index('const TF_TIME_RANGE_LABELS')]
-          assert 'TF_MYFXBOOK_PRICES_KEY' in block
-          assert 'TF_MYFXBOOK_PRICES_AT_KEY' in block
+          assert "'tfMyfxbookPrices'" in block
+          assert "'tfMyfxbookPricesAt'" in block
           print('PC REV380 price snapshot export PASS')
           PY
       - name: Build iOS Browser bundle
