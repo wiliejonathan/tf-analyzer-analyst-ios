@@ -1,0 +1,48 @@
+name: Audit mobile FX realtime feed
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'release-staging/REV381-fx-feed-audit/READY'
+permissions:
+  contents: write
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test Yahoo Finance chart feed with browser Origin
+        run: |
+          set -euo pipefail
+          mkdir -p audit
+          {
+            echo '# Mobile FX Realtime Feed Audit'
+            for sym in 'USDJPY=X' 'USDCAD=X' 'USDCHF=X'; do
+              enc=$(python3 -c "import urllib.parse; print(urllib.parse.quote('$sym'))")
+              url="https://query1.finance.yahoo.com/v8/finance/chart/$enc?interval=1m&range=1d"
+              echo
+              echo "## $sym"
+              echo '### Headers'
+              curl -sS -D - -o /tmp/fx.json -A 'Mozilla/5.0' -H 'Origin: https://wiliejonathan.github.io' "$url" | sed -n '1,80p'
+              echo '### Result'
+              python3 - <<'PY'
+          import json
+          from pathlib import Path
+          try:
+              j=json.loads(Path('/tmp/fx.json').read_text())
+              r=j['chart']['result'][0]
+              m=r.get('meta',{})
+              print('regularMarketPrice=',m.get('regularMarketPrice'))
+              print('chartPreviousClose=',m.get('chartPreviousClose'))
+          except Exception as e:
+              print('ERROR',e)
+          PY
+            done
+          } > audit/MOBILE_FX_REALTIME_FEED.md
+      - name: Commit audit
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add audit/MOBILE_FX_REALTIME_FEED.md
+          git commit -m 'Audit realtime FX feed for Mobile parity' || exit 0
+          git push origin HEAD:main
