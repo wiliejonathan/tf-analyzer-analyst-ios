@@ -1,0 +1,103 @@
+name: Audit PC REV379 vs Mobile calculation parity
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'release-staging/REV380-calc-audit/READY'
+permissions:
+  contents: write
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download PC REV379
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/pc379
+          gh release download v1.16.92 --repo wiliejonathan/tf-multi-analyst-releases --pattern 'TF_Extension_PC_MAC_REV379_DOM_LOGOUT_SIDEBAR_LOGIN_FIX.zip' --output /tmp/pc379/base.zip
+          unzip -q /tmp/pc379/base.zip -d /tmp/pc379/ext
+          grep -RIl --include='*.js' 'function computeLot(' /tmp/pc379/ext > /tmp/pc379/candidates.txt
+          cat /tmp/pc379/candidates.txt
+          test -s /tmp/pc379/candidates.txt
+      - name: Compare calculation functions
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, difflib, re
+          mobile = Path('assets/dashboard-mobile.js').read_text(encoding='utf-8')
+          candidates = [Path(x.strip()) for x in Path('/tmp/pc379/candidates.txt').read_text().splitlines() if x.strip()]
+          pc_path = max(candidates, key=lambda p: len(p.read_text(encoding='utf-8', errors='ignore')))
+          pc = pc_path.read_text(encoding='utf-8', errors='ignore')
+          names = [
+            'tf_calcDollarPerPipUSD','getDollarPerPipForPair','getDollarPerPipForAnalyst',
+            'computeSlStatsFromHistory','computeSlPipsFromHistory','getEffectiveSlForAnalyst',
+            'tf_buildTradeCostFields','tf_getHistoryNetPnlDollar','tf_getHistoryNetPnlPercent',
+            'getRiskPercentForAnalyst','computeLot','roundLotToTwoDecimals','computeFixedLot',
+            'tf_getCompoundBaseBalanceForMonth','tf_recomputeBalancesSkippingDisabled',
+            'recomputeHistoryRows','updateEquityCurveFromRows','tf_updateStreakStateFixedLot',
+            'computeAndRenderDrawdownStats'
+          ]
+          def extract(src, name):
+              start = src.find('function '+name+'(')
+              if start < 0: return None
+              brace = src.find('{', start)
+              if brace < 0: return None
+              depth=0; i=brace; quote=None; esc=False; line=False; block=False; bt=chr(96)
+              while i < len(src):
+                  c=src[i]; n=src[i+1] if i+1<len(src) else ''
+                  if line:
+                      if c=='\n': line=False
+                      i+=1; continue
+                  if block:
+                      if c=='*' and n=='/': block=False; i+=2; continue
+                      i+=1; continue
+                  if quote:
+                      if esc: esc=False
+                      elif c=='\\': esc=True
+                      elif c==quote: quote=None
+                      i+=1; continue
+                  if c=='/' and n=='/': line=True; i+=2; continue
+                  if c=='/' and n=='*': block=True; i+=2; continue
+                  if c in ("'", '"', bt): quote=c; i+=1; continue
+                  if c=='{': depth+=1
+                  elif c=='}':
+                      depth-=1
+                      if depth==0: return src[start:i+1]
+                  i+=1
+              return None
+          def norm(x):
+              if x is None: return None
+              x = re.sub(r'//[^\n]*','',x)
+              x = re.sub(r'/\*.*?\*/','',x,flags=re.S)
+              return re.sub(r'\s+','',x)
+          rows=[]; diffs=[]
+          for name in names:
+              a=extract(pc,name); b=extract(mobile,name); na,nb=norm(a),norm(b)
+              same=(na is not None and nb is not None and na==nb)
+              rows.append((name,a is not None,b is not None,same,hashlib.sha256((na or '').encode()).hexdigest()[:12],hashlib.sha256((nb or '').encode()).hexdigest()[:12]))
+              if a is not None and b is not None and not same:
+                  d='\n'.join(difflib.unified_diff(a.splitlines(),b.splitlines(),fromfile='PC_REV379/'+name,tofile='MOBILE_REV372/'+name,lineterm='',n=3))
+                  diffs.append((name,d[:30000]))
+          report=['# PC REV379 vs Mobile REV372 - Calculation Parity Audit','',
+                  '- PC source asset: '+str(pc_path.relative_to(Path('/tmp/pc379/ext'))),
+                  '- PC SHA256: '+hashlib.sha256(pc.encode()).hexdigest(),
+                  '- Mobile SHA256: '+hashlib.sha256(mobile.encode()).hexdigest(),'',
+                  '| Function | PC | Mobile | Normalized parity | PC hash | Mobile hash |',
+                  '|---|---:|---:|---:|---|---|']
+          for r in rows:
+              report.append('| '+r[0]+' | '+('yes' if r[1] else 'no')+' | '+('yes' if r[2] else 'no')+' | '+('PASS' if r[3] else 'DIFF')+' | '+r[4]+' | '+r[5]+' |')
+          report += ['','## Diffs']
+          for name,d in diffs: report += ['', '### '+name, '~~~diff', d, '~~~']
+          Path('audit').mkdir(exist_ok=True)
+          Path('audit/REV379_PC_vs_MOBILE_CALC.md').write_text('\n'.join(report)+'\n',encoding='utf-8')
+          PY
+      - name: Commit audit
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add audit/REV379_PC_vs_MOBILE_CALC.md
+          git commit -m 'Audit REV379 PC vs mobile calculation parity' || exit 0
+          git push origin HEAD:main
