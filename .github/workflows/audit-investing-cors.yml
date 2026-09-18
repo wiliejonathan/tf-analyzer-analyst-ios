@@ -1,0 +1,41 @@
+name: Audit Investing mobile fetch compatibility
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'release-staging/REV381-investing-cors-audit/READY'
+permissions:
+  contents: write
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check Investing responses and CORS
+        run: |
+          set -euo pipefail
+          mkdir -p audit
+          ORIGIN='https://wiliejonathan.github.io'
+          {
+            echo '# Investing Mobile Fetch Compatibility'
+            for url in \
+              'https://id.investing.com/tools/forex-pip-calculator?tfmobile_audit=1' \
+              'https://id.investing.com/commodities/gold?tfmobile_audit=1'
+            do
+              echo
+              echo "## $url"
+              echo '### HEAD with Origin'
+              curl -L -sS -D - -o /dev/null -A 'Mozilla/5.0' -H "Origin: $ORIGIN" "$url" | sed -n '1,80p'
+              echo
+              echo '### HTML markers'
+              curl -L -sS --max-time 30 -A 'Mozilla/5.0' "$url" | \
+                grep -Eo 'table id="results"|pipCalcResults|instrument-price-last|USDJPY|USDCAD|USDCHF' | head -40 || true
+            done
+          } > audit/INVESTING_MOBILE_FETCH_COMPAT.md
+      - name: Commit audit
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add audit/INVESTING_MOBILE_FETCH_COMPAT.md
+          git commit -m 'Audit Investing mobile fetch compatibility' || exit 0
+          git push origin HEAD:main
