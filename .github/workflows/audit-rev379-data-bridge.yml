@@ -1,0 +1,56 @@
+name: Audit PC REV379 mobile data bridge
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'release-staging/REV380-data-audit/READY'
+permissions:
+  contents: write
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download PC REV379 and inspect export/import bridge
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/pc379 && mkdir -p /tmp/pc379/ext
+          gh release download v1.16.92 --repo wiliejonathan/tf-multi-analyst-releases --pattern 'TF_Extension_PC_MAC_REV379_DOM_LOGOUT_SIDEBAR_LOGIN_FIX.zip' --output /tmp/pc379/base.zip
+          unzip -q /tmp/pc379/base.zip -d /tmp/pc379/ext
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, hashlib
+          candidates=[]
+          for p in Path('/tmp/pc379/ext').rglob('*.js'):
+              s=p.read_text(encoding='utf-8',errors='ignore')
+              score=sum(k in s for k in ['tf_multi_analyst_export_v1','tfHistorySignals','localState','tf_current_balance'])
+              if score: candidates.append((score,len(s),p,s))
+          candidates.sort(reverse=True,key=lambda x:(x[0],x[1]))
+          report=['# REV379 PC export/import data audit','']
+          for score,size,p,s in candidates[:8]:
+              report += [f'## {p.relative_to(Path("/tmp/pc379/ext"))}',f'- score: {score}, bytes: {len(s)}, sha256: {hashlib.sha256(s.encode()).hexdigest()}','']
+              for term in ['tf_multi_analyst_export_v1','LOCAL_STATE_KEYS','localState','tfHistorySignals','combinedFiles','historyKey','mergeHistory','tf_current_balance','tf_risk_mode','tf_swap','tf_commission','tf_withdraw']:
+                  starts=[m.start() for m in re.finditer(re.escape(term),s)]
+                  if not starts: continue
+                  report += [f'### {term} ({len(starts)} hits)']
+                  for pos in starts[:5]:
+                      lo=max(0,pos-1300); hi=min(len(s),pos+2400)
+                      snippet=s[lo:hi]
+                      report += ['~~~js',snippet,'~~~']
+          mobile=Path('mobile-data-bridge.js').read_text(encoding='utf-8')
+          report += ['','## Mobile bridge canonical normalization snippet']
+          for term in ['LOCAL_STATE_KEYS','tfMobileNormalizeHistoryV31','tfMobileNormalizeStorageV31','applyPayload','mergeHistory']:
+              pos=mobile.find(term)
+              if pos>=0: report += [f'### {term}','~~~js',mobile[max(0,pos-900):min(len(mobile),pos+2600)],'~~~']
+          Path('audit').mkdir(exist_ok=True)
+          Path('audit/REV379_PC_vs_MOBILE_DATA_BRIDGE.md').write_text('\n'.join(report)+'\n',encoding='utf-8')
+          PY
+      - name: Commit audit
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add audit/REV379_PC_vs_MOBILE_DATA_BRIDGE.md
+          git commit -m 'Audit REV379 PC export against mobile data bridge' || exit 0
+          git push origin HEAD:main
