@@ -1,0 +1,146 @@
+name: Publish iOS Browser REV381 PC379 parity
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'release-staging/REV381-mobile/READY'
+permissions:
+  contents: write
+concurrency:
+  group: publish-mobile-rev381
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate Mobile source
+        run: |
+          set -euo pipefail
+          node --check assets/dashboard-mobile.js
+          node --check mobile-data-bridge.js
+          node --check mobile-remote.js
+          node --check service-worker.js
+          python3 - <<'PY'
+          from pathlib import Path
+          b=Path('mobile-data-bridge.js').read_text()
+          i=Path('index.html').read_text()
+          sw=Path('service-worker.js').read_text()
+          assert 'payload.schema===SCHEMA' in b
+          assert 'canonicalPc:hasOfficialPcEnvelope' in b
+          assert 'canonicalPc&&Array.isArray(st.tfHistorySignals)' in b
+          assert 'clone(st.tfHistorySignals,st.tfHistorySignals.slice())' in b
+          assert 'tfMobileNormalizeHistoryV31(legacyHistoryCandidate)' in b
+          assert 'const keys=["entry","takeProfit","stopLoss","type","createdDate","displayDate","signalId","expiredDate"];' in b
+          assert '?rev=381' in i and '?rev=380' not in i
+          assert 'rev381-pc379-parity' in sw and '?rev=381' in sw
+          print('REV381 Mobile source validation PASS')
+          PY
+      - name: Audit calculation functions against official PC REV379
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/pc379 && mkdir -p /tmp/pc379/ext
+          gh release download v1.16.92 --repo wiliejonathan/tf-multi-analyst-releases --pattern 'TF_Extension_PC_MAC_REV379_DOM_LOGOUT_SIDEBAR_LOGIN_FIX.zip' --output /tmp/pc379/pc.zip
+          echo '531d5cbe418af77d4e32d987161b4bbf6166ed3390691954a9b8260d55686ac8  /tmp/pc379/pc.zip' | sha256sum -c -
+          unzip -q /tmp/pc379/pc.zip -d /tmp/pc379/ext
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, hashlib
+          mobile=Path('assets/dashboard-mobile.js').read_text()
+          candidates=[]
+          for p in Path('/tmp/pc379/ext/assets').glob('*.js'):
+              s=p.read_text(errors='ignore')
+              if 'function computeLot(' in s and 'function tf_calcDollarPerPipUSD(' in s:
+                  candidates.append((len(s),p,s))
+          assert candidates, 'PC calculation asset not found'
+          _,pc_path,pc=max(candidates,key=lambda x:x[0])
+          names=[
+            'tf_calcDollarPerPipUSD','getDollarPerPipForPair','getDollarPerPipForAnalyst',
+            'computeSlStatsFromHistory','computeSlPipsFromHistory','tf_buildTradeCostFields',
+            'tf_getHistoryNetPnlDollar','tf_getHistoryNetPnlPercent','getRiskPercentForAnalyst',
+            'computeLot','roundLotToTwoDecimals','computeFixedLot',
+            'tf_getCompoundBaseBalanceForMonth','tf_recomputeBalancesSkippingDisabled',
+            'recomputeHistoryRows','tf_updateStreakStateFixedLot','computeAndRenderDrawdownStats'
+          ]
+          def extract(src,name):
+              m=re.search(r'function\s+'+re.escape(name)+r'\s*\(',src)
+              if not m:return None
+              start=m.start(); brace=src.find('{',m.end()); depth=0; q=None; esc=False; line=False; block=False
+              i=brace
+              while i<len(src):
+                  c=src[i]; n=src[i+1] if i+1<len(src) else ''
+                  if line:
+                      if c=='\n':line=False
+                      i+=1;continue
+                  if block:
+                      if c=='*' and n=='/':block=False;i+=2;continue
+                      i+=1;continue
+                  if q:
+                      if esc:esc=False
+                      elif c=='\\':esc=True
+                      elif c==q:q=None
+                      i+=1;continue
+                  if c=='/' and n=='/':line=True;i+=2;continue
+                  if c=='/' and n=='*':block=True;i+=2;continue
+                  if c in ("'",'"',chr(96)):q=c;i+=1;continue
+                  if c=='{':depth+=1
+                  elif c=='}':
+                      depth-=1
+                      if depth==0:return src[start:i+1]
+                  i+=1
+              return None
+          def norm(x):
+              if x is None:return None
+              x=re.sub(r'//[^\n]*','',x)
+              x=re.sub(r'/\*.*?\*/','',x,flags=re.S)
+              return re.sub(r'\s+','',x)
+          bad=[]
+          for name in names:
+              a,b=norm(extract(pc,name)),norm(extract(mobile,name))
+              if not a or not b or a!=b:
+                  bad.append(name)
+          assert not bad, 'Calculation parity mismatch: '+', '.join(bad)
+          print('PC REV379 calculation parity PASS:',len(names),'functions; asset',pc_path.name)
+          PY
+      - name: Validate bridge identity against PC combine semantics
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          b=Path('mobile-data-bridge.js').read_text()
+          required=[
+            'const analyst=norm(it&&it.analyst).toLowerCase();',
+            'const pair=norm(it&&it.pair).toUpperCase();',
+            'if(signalId)return [analyst,pair,created,closed,"signal:"+signalId].join("|");',
+            'return [analyst,pair,created,closed,"entry:"+numlike(it&&it.entry),"type:"+norm(it&&it.type).toLowerCase()].join("|");',
+            'const keys=["entry","takeProfit","stopLoss","type","createdDate","displayDate","signalId","expiredDate"];'
+          ]
+          for x in required: assert x in b, x
+          print('PC REV379 history identity/precedence parity PASS')
+          PY
+      - name: Build release bundle
+        run: |
+          set -euo pipefail
+          source release-staging/REV381-mobile/release.env
+          rm -f "/tmp/$ASSET" "/tmp/$ASSET.sha256"
+          zip -qr "/tmp/$ASSET" .             -x '.git/*' '.github/*' 'release-staging/*' 'audit/*'
+          unzip -t "/tmp/$ASSET" >/dev/null
+          SHA=$(sha256sum "/tmp/$ASSET" | awk '{print $1}')
+          printf '%s  %s\n' "$SHA" "$ASSET" > "/tmp/$ASSET.sha256"
+          echo "MOBILE_SHA256=$SHA" >> "$GITHUB_ENV"
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          source release-staging/REV381-mobile/release.env
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists; refusing overwrite."
+            exit 1
+          fi
+          gh release create "$TAG" "/tmp/$ASSET" "/tmp/$ASSET.sha256"             --target "$GITHUB_SHA" --title "$TITLE"             --notes-file release-staging/REV381-mobile/RELEASE_NOTES.md --latest
+          echo "Published $TAG SHA256=$MOBILE_SHA256"
