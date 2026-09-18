@@ -1,0 +1,54 @@
+name: Audit CORS safe FX sources
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'release-staging/REV381-cors-fx-sources/READY'
+permissions:
+  contents: write
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check candidate FX feeds
+        run: |
+          set -euo pipefail
+          mkdir -p audit
+          python3 - <<'PY'
+          import subprocess, json, pathlib
+          urls=[
+            'https://api.frankfurter.app/latest?from=USD&to=JPY,CAD,CHF',
+            'https://open.er-api.com/v6/latest/USD',
+            'https://api.exchangerate-api.com/v4/latest/USD',
+            'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json'
+          ]
+          out=['# CORS-safe FX Sources Audit','']
+          for u in urls:
+              out+=['## '+u]
+              p=subprocess.run(['curl','-sS','-D','-','-A','Mozilla/5.0','-H','Origin: https://wiliejonathan.github.io',u],capture_output=True,text=True,timeout=30)
+              text=p.stdout
+              head,_,body=text.partition('\r\n\r\n')
+              if not body:
+                  head,_,body=text.partition('\n\n')
+              out+=['### Headers','~~~text',head[:5000],'~~~','### Parsed']
+              try:
+                  j=json.loads(body)
+                  if 'rates' in j:
+                      out.append(json.dumps({k:j['rates'].get(k) for k in ['JPY','CAD','CHF']},ensure_ascii=False))
+                  elif 'usd' in j:
+                      out.append(json.dumps({k:j['usd'].get(k.lower()) for k in ['JPY','CAD','CHF']},ensure_ascii=False))
+                  else:
+                      out.append(body[:1200])
+              except Exception as e:
+                  out.append('parse error: '+str(e)+' body='+body[:600])
+              out.append('')
+          pathlib.Path('audit/CORS_FX_SOURCES.md').write_text('\n'.join(out),encoding='utf-8')
+          PY
+      - name: Commit audit
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add audit/CORS_FX_SOURCES.md
+          git commit -m 'Audit CORS safe FX sources for Mobile' || exit 0
+          git push origin HEAD:main
