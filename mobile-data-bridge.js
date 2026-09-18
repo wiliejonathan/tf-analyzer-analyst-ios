@@ -687,7 +687,21 @@ async function importFiles(files,opts={}){
     await new Promise(resolve=>requestAnimationFrame(resolve));
 
     const payload=payloads.length>1?combine(payloads,fileNames):payloads[0];
-    const normalizedStorage=tfMobileNormalizeStorageV31(payload&&payload.storage&&typeof payload.storage==='object'?payload.storage:payload);
+    // REV382 IMPORT FIX: manual Import JSON must preserve official PC export
+    // storage exactly like Remote/applyPayload does. REV381 called the normalizer
+    // without canonicalPc here, so tfHistorySignals/tfAnalystSources from a valid
+    // tf_multi_analyst_export_v1 could be treated as legacy aliases and become empty
+    // before applyPayload() ever saw the official envelope.
+    const hasOfficialPcEnvelope=!!(
+      payload &&
+      payload.schema===SCHEMA &&
+      payload.storage &&
+      typeof payload.storage==='object'
+    );
+    const normalizedStorage=tfMobileNormalizeStorageV31(
+      payload&&payload.storage&&typeof payload.storage==='object'?payload.storage:payload,
+      {canonicalPc:hasOfficialPcEnvelope}
+    );
     if(payload&&payload.storage&&typeof payload.storage==='object')payload.storage=normalizedStorage;else Object.assign(payload,normalizedStorage);
     const trades=Array.isArray(normalizedStorage.tfHistorySignals)?normalizedStorage.tfHistorySignals.length:0;
     const analystSources=normalizedStorage.tfAnalystSources&&typeof normalizedStorage.tfAnalystSources==="object"?normalizedStorage.tfAnalystSources:{};
