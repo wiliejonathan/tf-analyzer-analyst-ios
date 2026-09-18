@@ -10,6 +10,7 @@ on:
       - '!release-staging/REV380-data-audit/**'
       - '!release-staging/REV381-mobile/**'
       - '!release-staging/REV381-price-provider-audit/**'
+      - '!release-staging/REV382-mobile/**'
 
 permissions:
   contents: write
