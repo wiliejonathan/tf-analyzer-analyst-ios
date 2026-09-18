@@ -29,6 +29,7 @@ jobs:
           b=Path('mobile-data-bridge.js').read_text()
           i=Path('index.html').read_text()
           sw=Path('service-worker.js').read_text()
+          gate=Path('mobile-license-gate.js').read_text()
           assert 'payload.schema===SCHEMA' in b
           assert 'canonicalPc:hasOfficialPcEnvelope' in b
           assert 'canonicalPc&&Array.isArray(st.tfHistorySignals)' in b
@@ -37,6 +38,7 @@ jobs:
           assert 'const keys=["entry","takeProfit","stopLoss","type","createdDate","displayDate","signalId","expiredDate"];' in b
           assert '?rev=381' in i and '?rev=380' not in i
           assert 'rev381-pc379-parity' in sw and '?rev=381' in sw
+          assert '?rev=381' in gate and '?rev=367' not in gate
           print('REV381 Mobile source validation PASS')
           PY
       - name: Audit calculation functions against official PC REV379
