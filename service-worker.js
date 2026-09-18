@@ -1,22 +1,22 @@
-const CACHE='tf-analyzer-analyst-mobile-v149-rev372-remote-dashboard-home';
+const CACHE='tf-analyzer-analyst-mobile-v150-rev380-calculation-parity';
 const ASSETS=[
-  './assets/dashboard-mobile.js?rev=372',
-  './assets/dashboard-original.css?rev=372',
+  './assets/dashboard-mobile.js?rev=380',
+  './assets/dashboard-original.css?rev=380',
   './icon32.png',
   './icons/icon-180.png',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './index.html',
   './manifest.webmanifest',
-  './mobile-app-shell.js?rev=372',
-  './mobile-remote.js?rev=372',
-  './mobile-chrome-shim.js?rev=372',
-  './mobile-data-bridge.js?rev=372',
-  './mobile-force-update.js?rev=372',
-  './mobile-license-gate.js?rev=372',
-  './mobile-remote-dashboard-home-hotfix.js?rev=372',
-  './mobile-import-fix-v30.js?rev=372',
-  './mobile-overrides.css?rev=372'
+  './mobile-app-shell.js?rev=380',
+  './mobile-remote.js?rev=380',
+  './mobile-chrome-shim.js?rev=380',
+  './mobile-data-bridge.js?rev=380',
+  './mobile-force-update.js?rev=380',
+  './mobile-license-gate.js?rev=380',
+  './mobile-remote-dashboard-home-hotfix.js?rev=380',
+  './mobile-import-fix-v30.js?rev=380',
+  './mobile-overrides.css?rev=380'
 ];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
@@ -69,3 +69,5 @@ self.addEventListener('notificationclick', event => {
 // REV368: mobile package aligned with PC REV368; Remote Update errors are surfaced from the PC strict login preflight.
 
 // REV372: Remote > Buka Dashboard now returns to the Mobile app home and never sends open_dashboard to the PC plugin.
+
+// REV380: canonical PC history is preserved verbatim and PC price snapshot is used for Mobile calculation parity.
