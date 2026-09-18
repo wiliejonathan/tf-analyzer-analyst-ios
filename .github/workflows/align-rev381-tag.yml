@@ -1,0 +1,22 @@
+name: Align REV381 release tag
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'release-staging/REV381-tag-align/READY'
+permissions:
+  contents: write
+jobs:
+  align:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Point v1.16.94 to final REV381 build source
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git tag -f v1.16.94 e151d64156e2026c15f7c4b2fba66d5bb18d4a7e
+          git push origin refs/tags/v1.16.94 --force
