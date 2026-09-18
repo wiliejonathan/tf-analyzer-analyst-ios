@@ -407,7 +407,7 @@ function historyKey(it){
   }catch(e){return"";}
 }
 function completeness(it){
-  // REV380: match the PC combine/import precedence exactly. Extra Mobile-only
+  // REV381: match PC REV379 combine/import precedence exactly. Extra Mobile-only
   // bookkeeping fields must never make a less-complete duplicate win.
   if(!it||typeof it!=="object")return 0;
   const keys=["entry","takeProfit","stopLoss","type","createdDate","displayDate","signalId","expiredDate"];
@@ -521,14 +521,15 @@ function tfMobileBuildSourcesFromHistoryV31(history,existing){
   }
   return out;
 }
-function tfMobileNormalizeStorageV31(input){
+function tfMobileNormalizeStorageV31(input,opts){
   const st=input&&typeof input==='object'?clone(input,{}):{};
+  const canonicalPc=!!(opts&&opts.canonicalPc===true);
 
-  // REV380 CALCULATION PARITY:
-  // A canonical PC export/Remote bundle already contains the exact rows used by
-  // Desktop. Do NOT coerce, alias, enrich, re-index, uppercase, or filter those
-  // rows. Mobile compatibility normalization is only for legacy/non-PC files.
-  const hasCanonicalPcHistory=Array.isArray(st.tfHistorySignals);
+  // REV381 MOBILE-ONLY CALCULATION PARITY.
+  // Official PC REV379 export/Remote bundles are authoritative. Preserve their
+  // calculation input rows byte-for-value instead of running legacy Mobile
+  // aliases/coercion/filtering over them. Legacy files still use normalization.
+  const hasCanonicalPcHistory=canonicalPc&&Array.isArray(st.tfHistorySignals);
   const legacyHistoryCandidate=st.historySignals??st.tfHistory??st.history??st.signals;
   const history=hasCanonicalPcHistory
     ? clone(st.tfHistorySignals,st.tfHistorySignals.slice())
@@ -536,6 +537,7 @@ function tfMobileNormalizeStorageV31(input){
   st.tfHistorySignals=Array.isArray(history)?history:[];
 
   const hasCanonicalSources=!!(
+    canonicalPc &&
     st.tfAnalystSources &&
     typeof st.tfAnalystSources==='object' &&
     !Array.isArray(st.tfAnalystSources)
@@ -557,9 +559,7 @@ function tfMobileNormalizeStorageV31(input){
     ? st.tfAvgSlPips
     : {};
 
-  // Any additional canonical PC storage keys (including REV380
-  // tfMyfxbookPrices/tfMyfxbookPricesAt) remain untouched in st and are written
-  // to Mobile storage by applyPayload().
+  // Unknown canonical PC storage keys are intentionally left untouched in st.
   return st;
 }
 async function tfMobileReadBackV31(){
@@ -608,8 +608,13 @@ window.tfMobileRecoverRenderV31=tfMobileRecoverRenderV31;
 
 async function applyPayload(payload,fileNames){
   if(!payload||typeof payload!=="object")throw new Error("Format file tidak valid.");
+  const hasOfficialPcEnvelope=(
+    payload.schema===SCHEMA &&
+    payload.storage &&
+    typeof payload.storage==="object"
+  );
   const rawStorage=payload.storage&&typeof payload.storage==="object"?payload.storage:payload;
-  const st=tfMobileNormalizeStorageV31(rawStorage);
+  const st=tfMobileNormalizeStorageV31(rawStorage,{canonicalPc:hasOfficialPcEnvelope});
   const defaults={tfMonthlyStats:{},tfHistorySignals:[],tfScoreHistory:[],tfNoDataPairs:{},tfAvgSlPips:{},tfAnalystSources:{}};
   Object.keys(defaults).forEach(k=>{if(!(k in st))st[k]=defaults[k];});
   st.tfSelectedTimeRange=st.tfSelectedTimeRange||"all_time";
