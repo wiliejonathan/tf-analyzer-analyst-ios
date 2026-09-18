@@ -1,0 +1,48 @@
+name: Audit REV379 local calculation state
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'release-staging/REV381-local-state-audit/READY'
+permissions:
+  contents: write
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract local state export and calculation storage keys
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/pc379 && mkdir -p /tmp/pc379/ext audit
+          gh release download v1.16.92 --repo wiliejonathan/tf-multi-analyst-releases --pattern 'TF_Extension_PC_MAC_REV379_DOM_LOGOUT_SIDEBAR_LOGIN_FIX.zip' --output /tmp/pc379/pc.zip
+          unzip -q /tmp/pc379/pc.zip -d /tmp/pc379/ext
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          out=['# REV379 Local Calculation State','']
+          terms=['tf_collectLocalStateForExport','TF_TABLE1_SWAP_ENABLED_KEY','TF_TABLE1_COMM_ENABLED_KEY','TF_WITHDRAW_ENABLED_KEY','TF_WITHDRAW_AMOUNT_KEY','TF_WITHDRAW_EVERY_MONTHS_KEY','TF_WITHDRAW_RULE','TF_TABLE1_BALANCE_KEY','RISK_MODE_STORAGE_KEY']
+          for p in Path('/tmp/pc379/ext').rglob('*.js'):
+              s=p.read_text(errors='ignore')
+              if not any(t in s for t in terms): continue
+              out += ['## '+str(p.relative_to(Path('/tmp/pc379/ext')))]
+              seen=[]
+              for t in terms:
+                  start=0
+                  while True:
+                      i=s.find(t,start)
+                      if i<0: break
+                      if all(abs(i-x)>2500 for x in seen):
+                          seen.append(i); out += ['',f'### {t} @ {i}','~~~js',s[max(0,i-2200):min(len(s),i+6500)],'~~~']
+                      start=i+len(t)
+          Path('audit/REV379_LOCAL_CALC_STATE.md').write_text('\n'.join(out)+'\n',encoding='utf-8')
+          PY
+      - name: Commit audit
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add audit/REV379_LOCAL_CALC_STATE.md
+          git commit -m 'Audit REV379 local calculation state' || exit 0
+          git push origin HEAD:main
