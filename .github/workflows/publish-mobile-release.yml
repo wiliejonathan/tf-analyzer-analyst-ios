@@ -5,6 +5,9 @@ on:
     branches: [main]
     paths:
       - 'release-staging/**/READY'
+      - '!release-staging/REV380-mobile/**'
+      - '!release-staging/REV380-calc-audit/**'
+      - '!release-staging/REV380-data-audit/**'
 
 permissions:
   contents: write
