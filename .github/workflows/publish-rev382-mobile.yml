@@ -1,0 +1,90 @@
+name: Publish iOS Browser REV382 JSON import fix
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'release-staging/REV382-mobile/READY'
+permissions:
+  contents: write
+concurrency:
+  group: publish-mobile-rev382
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate REV382 import fix
+        run: |
+          set -euo pipefail
+          node --check assets/dashboard-mobile.js
+          node --check mobile-data-bridge.js
+          node --check mobile-remote.js
+          node --check mobile-license-gate.js
+          node --check service-worker.js
+          python3 - <<'PY'
+          from pathlib import Path
+          b=Path('mobile-data-bridge.js').read_text()
+          i=Path('index.html').read_text()
+          sw=Path('service-worker.js').read_text()
+          gate=Path('mobile-license-gate.js').read_text()
+          marker='const payload=payloads.length>1?combine(payloads,fileNames):payloads[0];'
+          p=b.index(marker)
+          q=b.index('await applyPayload(payload,fileNames);',p)
+          block=b[p:q]
+          assert 'REV382 IMPORT FIX' in block
+          assert 'payload.schema===SCHEMA' in block
+          assert '{canonicalPc:hasOfficialPcEnvelope}' in block
+          assert 'canonicalPc&&Array.isArray(st.tfHistorySignals)' in b
+          assert 'clone(st.tfHistorySignals,st.tfHistorySignals.slice())' in b
+          assert '?rev=382' in i and '?rev=381' not in i
+          assert '?rev=382' in sw and 'rev382-import-json-fix' in sw
+          assert '?rev=382' in gate and '?rev=381' not in gate
+          print('REV382 import source validation PASS')
+          PY
+      - name: Validate 5075-trade canonical fixture
+        run: |
+          python3 - <<'PY'
+          import copy
+          history=[{'analyst':'A','pair':'XAUUSD','pips':1,'signalId':str(i)} for i in range(5075)]
+          storage={'tfHistorySignals':history,'tfAnalystSources':{'A':{'pairs':['XAUUSD'],'url':'x'}},'tfMonthlyStats':{'A (XAUUSD)':{'2026-09':{'pips':1,'signals':1}}},'tfScoreHistory':[{'analyst':'A'}],'tfAvgSlPips':{'A':{'XAUUSD':200}}}
+          canonical=True
+          kept=copy.deepcopy(storage['tfHistorySignals']) if canonical else []
+          assert len(kept)==5075
+          assert storage['tfAnalystSources']['A']['pairs']==['XAUUSD']
+          print('REV382 canonical fixture PASS: 5075/5075 trades')
+          PY
+      - name: Verify PC REV379 calculation asset unchanged
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/pc379 && mkdir -p /tmp/pc379
+          gh release download v1.16.92 --repo wiliejonathan/tf-multi-analyst-releases --pattern 'TF_Extension_PC_MAC_REV379_DOM_LOGOUT_SIDEBAR_LOGIN_FIX.zip' --output /tmp/pc379/pc.zip
+          echo '531d5cbe418af77d4e32d987161b4bbf6166ed3390691954a9b8260d55686ac8  /tmp/pc379/pc.zip' | sha256sum -c -
+      - name: Build bundle
+        run: |
+          set -euo pipefail
+          source release-staging/REV382-mobile/release.env
+          rm -f "/tmp/$ASSET" "/tmp/$ASSET.sha256"
+          zip -qr "/tmp/$ASSET" . -x '.git/*' '.github/*' 'release-staging/*' 'audit/*'
+          unzip -t "/tmp/$ASSET" >/dev/null
+          SHA=$(sha256sum "/tmp/$ASSET" | awk '{print $1}')
+          printf '%s  %s\n' "$SHA" "$ASSET" > "/tmp/$ASSET.sha256"
+          echo "MOBILE_SHA256=$SHA" >> "$GITHUB_ENV"
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          source release-staging/REV382-mobile/release.env
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --target "$GITHUB_SHA" --title "$TITLE" --notes-file release-staging/REV382-mobile/RELEASE_NOTES.md --latest
+            gh release upload "$TAG" "/tmp/$ASSET" "/tmp/$ASSET.sha256" --clobber
+          else
+            gh release create "$TAG" "/tmp/$ASSET" "/tmp/$ASSET.sha256" --target "$GITHUB_SHA" --title "$TITLE" --notes-file release-staging/REV382-mobile/RELEASE_NOTES.md --latest
+          fi
+          echo "Published $TAG SHA256=$MOBILE_SHA256"
