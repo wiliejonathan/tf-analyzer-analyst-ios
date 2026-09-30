@@ -91,6 +91,8 @@ jobs:
           assert "selectedAnalystsGlobal" in dash
           assert "__knownAnalysts" in dash
           assert "syntheticHealthy:true" in dash
+          assert ".replace(/^\\s*[✓!×]\\s*/,'')" in dash
+          assert 'REV397 — nested analyst name color inheritance' in css
           assert '#history-table tbody tr.tf-history-row-pnl-positive > td:not([data-history-col="analyst"]) *' in css
           assert '#history-table tbody tr.tf-history-row-pnl-negative > td:not([data-history-col="analyst"]) *' in css
           assert 'LICENSE_ANDROID_RELAY_URL' in gate
