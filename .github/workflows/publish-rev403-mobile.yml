@@ -1,0 +1,63 @@
+name: Publish iOS Browser REV403 table column sizing
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'release-staging/REV403-mobile/READY'
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: QA
+        run: |
+          set -euo pipefail
+          node --check mobile-data-bridge.js
+          node --check mobile-chrome-shim.js
+          node --check assets/dashboard-mobile.js
+          node --check mobile-license-gate.js
+          node --check mobile-force-update.js
+          node --check service-worker.js
+          grep -q 'tfMobileRecoverRenderPromiseV402' mobile-data-bridge.js
+          grep -q '__TF_MOBILE_IMPORT_FAST_ACTIVE_V402' mobile-data-bridge.js
+          grep -q 'applyPayload(payload,fileNames,{fastImport:true})' mobile-data-bridge.js
+          grep -q '__TF_MOBILE_SILENT_STORAGE_SET=true' mobile-data-bridge.js
+          grep -q 'import-rev402-fast' mobile-data-bridge.js
+          grep -q '\[350,1400\]' mobile-data-bridge.js
+          grep -q 'function tfMobileRecoverRememberedLinksV401' mobile-data-bridge.js
+          grep -q 'tf_renderHoldingPeriodTables(rowsForCalc);' assets/dashboard-mobile.js
+          grep -q 'tf-analyst-name-color-target' assets/dashboard-original.css
+          grep -q '?rev=402' index.html
+          grep -q 'rev403-table-column-sizing' service-worker.js
+          grep -q "CURRENT_TAG = 'v1.17.16'" mobile-force-update.js
+          grep -q "remoteRevision: 'REV403'" mobile-license-gate.js
+          grep -q 'REV403 — Table 3/Table 4 column sizing polish' assets/dashboard-original.css
+          grep -q 'min-width:190px' assets/dashboard-original.css
+          grep -q 'width:44%' assets/dashboard-original.css
+          echo 'REV403 mobile QA PASS'
+      - name: Build
+        run: |
+          set -euo pipefail
+          OUT=/tmp/TF_Analyzer_Analyst_iOS_BROWSER_REV403_TABLE_COLUMN_SIZING.zip
+          zip -qr "$OUT" . -x '.git/*' '.github/*' 'release-staging/*'
+          unzip -tq "$OUT"
+          sha256sum "$OUT" > "$OUT.sha256"
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG=v1.17.16
+          OUT=/tmp/TF_Analyzer_Analyst_iOS_BROWSER_REV403_TABLE_COLUMN_SIZING.zip
+          NOTES=release-staging/REV403-mobile/RELEASE_NOTES.md
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --target "$GITHUB_SHA" --title 'TF Analyzer Analyst V1.17.16 - REV403 Table Column Sizing' --notes-file "$NOTES" --latest
+            gh release upload "$TAG" "$OUT" "$OUT.sha256" --clobber
+          else
+            gh release create "$TAG" "$OUT" "$OUT.sha256" --target "$GITHUB_SHA" --title 'TF Analyzer Analyst V1.17.16 - REV403 Table Column Sizing' --notes-file "$NOTES" --latest
+          fi
