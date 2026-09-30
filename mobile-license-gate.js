@@ -207,7 +207,7 @@
     if (isAndroidClient()) {
       try { return await androidRelayLicenseLookup(body, timeoutMs); } catch (_) {}
     }
-    return await licenseFallbackLookup(body, Math.max(timeoutMs, 30000));
+    return await directLicenseLookup(body, Math.max(timeoutMs, 25000));
   }
 
   async function api(path, body, timeoutMs = 15000) {
