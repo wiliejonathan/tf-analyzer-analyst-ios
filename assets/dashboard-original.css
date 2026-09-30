@@ -408,3 +408,11 @@ html:not([data-tf-server-authorized="1"])body{overflow:hidden!important;backgrou
 .tf-score-summary-table td:nth-child(3){
   width:18% !important;
 }
+
+/* REV406: left aligned analyst body cells; headers retain their alignment. */
+#summary-table tbody td.monthly-sticky-col-2,
+#summary-table tbody td:first-child,
+#monthly-table tbody td.monthly-sticky-col-2,
+#history-table tbody td[data-history-col="analyst"],
+#drawdown-table tbody tr:not(.dd-child-row)>td:nth-child(2){text-align:left!important;justify-content:flex-start!important;padding-left:10px!important;}
+#tf-lot-sizing-title{font-size:15px;margin:14px 0 8px;}

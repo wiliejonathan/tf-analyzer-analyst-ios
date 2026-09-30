@@ -1634,7 +1634,7 @@
       let relevant=false;
       for(const m of mutations){
         const t=m.target&&m.target.nodeType===1?m.target:null;
-        if(t&&(t.closest&&t.closest('#monthly-table,#history-table'))){relevant=true;break;}
+        if(t&&t.matches('thead,tr,tbody')&&Array.from(m.addedNodes||[]).some(n=>n.nodeType===1&&n.matches('tr,td,th'))&&(t.closest&&t.closest('#monthly-table,#history-table'))){relevant=true;break;}
         for(const n of (m.addedNodes||[])){
           if(n&&n.nodeType===1&&((n.matches&&n.matches('#monthly-table,#history-table,#monthly-table *,#history-table *'))||(n.querySelector&&n.querySelector('#monthly-table,#history-table')))){relevant=true;break;}
         }
