@@ -29,6 +29,7 @@ jobs:
           node --test tests/import407.cjs
           node --test tests/performance406.cjs
           npm install --no-save playwright
+          TF_BROWSER_CHANNEL=chrome node tests/popup407.cjs
           TF_BROWSER_CHANNEL=chrome node tests/import-browser407.cjs
           TF_BROWSER_CHANNEL=chrome TF_RISK_SOURCE=assets/dashboard-mobile.js TF_DASHBOARD_CSS=assets/dashboard-original.css TF_EXTRA_CSS=mobile-overrides.css node tests/browser406.cjs
           grep -q 'rev407-single-pass-import' service-worker.js
