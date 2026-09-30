@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  var CURRENT_TAG = 'v1.17.20';
+  var CURRENT_TAG = 'v1.17.21';
   var API_URL = 'https://api.github.com/repos/wiliejonathan/Apk-android/releases/latest';
   var CACHE_KEY = 'tf_android_required_update_v1';
   var CHECK_KEY = 'tf_android_update_last_check_v1';
@@ -211,3 +211,4 @@
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot,{once:true});
   else boot();
 })();
+

@@ -1,23 +1,23 @@
-const CACHE='tf-analyzer-analyst-mobile-rev407-single-pass-import';
+const CACHE='tf-analyzer-analyst-mobile-rev408-responsive-import';
 const ASSETS=[
-  './assets/dashboard-mobile.js?rev=407',
-  './assets/dashboard-original.css?rev=407',
+  './assets/dashboard-mobile.js?rev=408',
+  './assets/dashboard-original.css?rev=408',
   './icon32.png',
   './icons/icon-180.png',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './index.html',
   './manifest.webmanifest',
-  './mobile-app-shell.js?rev=407',
-  './mobile-remote.js?rev=407',
-  './mobile-chrome-shim.js?rev=407',
-  './mobile-data-bridge.js?rev=407',
-  './mobile-force-update.js?rev=407',
-  './mobile-license-gate.js?rev=407',
-  './activation-proxy.html?rev=407',
-  './mobile-remote-dashboard-home-hotfix.js?rev=407',
-  './mobile-import-fix-v30.js?rev=407',
-  './mobile-overrides.css?rev=407'
+  './mobile-app-shell.js?rev=408',
+  './mobile-remote.js?rev=408',
+  './mobile-chrome-shim.js?rev=408',
+  './mobile-data-bridge.js?rev=408',
+  './mobile-force-update.js?rev=408',
+  './mobile-license-gate.js?rev=408',
+  './activation-proxy.html?rev=408',
+  './mobile-remote-dashboard-home-hotfix.js?rev=408',
+  './mobile-import-fix-v30.js?rev=408',
+  './mobile-overrides.css?rev=408'
 ];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
@@ -73,3 +73,4 @@ self.addEventListener('notificationclick', event => {
 
 
 // REV381: Mobile-only parity with official PC REV379 canonical export data.
+

@@ -1,0 +1,1 @@
+Fix mobile JSON import responsiveness: preserve analyst status spans during mobile table layout, avoid layout observer self-triggering, skip redundant boot recovery after successful storage load, normalize import only once, and yield between table render phases. Test full mobile shell with 4,348 synthetic trades and 4x CPU slowdown. No data is discarded.

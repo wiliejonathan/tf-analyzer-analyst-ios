@@ -1589,7 +1589,8 @@
           if(!name.getAttribute('data-tf-v312-name'))name.setAttribute('data-tf-v312-name',base);
           const p=(pair.textContent||'').trim();
           const desired=p&&p!=='-'?base+' ('+p+')':base;
-          if((name.textContent||'')!==desired)name.textContent=desired;
+          const target=name.querySelector('.tf-analyst-name-color-target')||name;
+          if((target.textContent||'')!==desired)target.textContent=desired;
           if(name.title!==desired)name.title=desired;
         });
         // REV315: desktop width calculation still counts ACTION + PAIR even
@@ -1642,7 +1643,13 @@
       }
       if(!relevant||queued)return;
       queued=true;
-      requestAnimationFrame(()=>{queued=false;tfApplyRev312TableLayouts();});
+      requestAnimationFrame(()=>{
+        window.__tfRev312TableObserver.disconnect();
+        try { tfApplyRev312TableLayouts(); } finally {
+          queued=false;
+          window.__tfRev312TableObserver.observe(document.documentElement,{childList:true,subtree:true});
+        }
+      });
     });
     window.__tfRev312TableObserver.observe(document.documentElement,{childList:true,subtree:true});
     if(!window.__tfMonthlyResizeV316){
@@ -1723,3 +1730,4 @@
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, {once:true});
   else boot();
 })();
+

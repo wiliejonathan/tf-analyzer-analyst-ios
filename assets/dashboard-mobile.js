@@ -12098,7 +12098,7 @@ const hasChromeAPI = typeof chrome !== 'undefined' && chrome.storage && chrome.s
 if (!hasChromeAPI)
 return Promise.resolve(false);
 return new Promise((resolve,reject)=>{
-chrome.storage.local.get(['tfMonthlyStats', 'tfHistorySignals', 'tfAnalystSources', 'tfNoDataPairs', 'tfAvgSlPips'], (data) => {
+chrome.storage.local.get(['tfMonthlyStats', 'tfHistorySignals', 'tfAnalystSources', 'tfNoDataPairs', 'tfAvgSlPips'], async (data) => {
 try {
 const rawMonthlyStats = data.tfMonthlyStats || {};
 const rawHistory = data.tfHistorySignals || [];
@@ -12148,8 +12148,13 @@ tfMobileHistoryRenderLimit = TF_MOBILE_HISTORY_CHUNK_SIZE;
 catch (e) { }
 rebuildAnalystListFromSources();
 setupAnalystTickerFilter();
-applyAnalystPairFilterAll();
+buildMonthlyTableSkeleton();
+await new Promise(r=>setTimeout(r,0));
+renderSummaryTable();
+await new Promise(r=>setTimeout(r,0));
+recomputeHistoryRows();
 setupHistoryForm();
+window.__TF_MOBILE_DASHBOARD_LOADED_REV408=true;
 resolve(true);
 }catch(e){reject(e);}
 });
@@ -17833,3 +17838,4 @@ showError('');
 // REV342: Mobile/Web Candle D1 flexible zoom sizing: viewport-relative candle width and visible-range candle scale.
 
 // REV347: Touch tooltip uses a 72px finger-clearance zone; desktop mouse placement unchanged.
+

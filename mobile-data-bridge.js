@@ -702,7 +702,7 @@ async function applyPayload(payload,fileNames,opts={}){
     typeof payload.storage==="object"
   );
   const hasCanonicalRawStorage=tfMobileLooksCanonicalStorageV399(rawStorage);
-  const st=tfMobileNormalizeStorageV31(rawStorage,{canonicalPc:(hasOfficialPcEnvelope||hasCanonicalRawStorage)});
+  const st=opts.normalized===true?rawStorage:tfMobileNormalizeStorageV31(rawStorage,{canonicalPc:(hasOfficialPcEnvelope||hasCanonicalRawStorage)});
   const defaults={tfMonthlyStats:{},tfHistorySignals:[],tfScoreHistory:[],tfNoDataPairs:{},tfAvgSlPips:{},tfAnalystSources:{}};
   Object.keys(defaults).forEach(k=>{if(!(k in st))st[k]=defaults[k];});
   st.tfSelectedTimeRange=st.tfSelectedTimeRange||"all_time";
@@ -840,7 +840,8 @@ async function importFiles(files,opts={}){
     }catch(e){}
 
     tfMobileUpdateImportLoading("Menyimpan data…",trades?`${trades.toLocaleString("id-ID")} trade sedang disiapkan.`:"Menyimpan data ke perangkat.");
-    await applyPayload(payload,fileNames,{fastImport:true});
+    await new Promise(r=>setTimeout(r,0));
+    await applyPayload(payload,fileNames,{fastImport:true,normalized:true});
 
     let elapsed=Math.max(0,(performance.now()-started)/1000);
     status(`Import selesai • ${trades.toLocaleString("id-ID")} trade • ${elapsed.toFixed(1)} dtk`,true);
@@ -927,7 +928,7 @@ setTimeout(()=>clearInterval(timer),15000);
 // V31: imported storage is authoritative. If the original dashboard boots before
 // IndexedDB data has finished propagating, reload it from storage and force a render.
 [350,1400].forEach(ms=>setTimeout(()=>{
-  if(window.__TF_MOBILE_IMPORT_FAST_ACTIVE_V402)return;
+  if(window.__TF_MOBILE_IMPORT_FAST_ACTIVE_V402||window.__TF_MOBILE_DASHBOARD_LOADED_REV408)return;
   void tfMobileRecoverRenderV31('boot-'+ms);
 },ms));
 try{
@@ -948,3 +949,4 @@ window.addEventListener('tf-rev294-force-cancel',e=>{
   window.__tfRev293ImportCancelled=true;
   try{tfMobileHideImportLoading();}catch(_){}
 });
+
