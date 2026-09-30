@@ -4,16 +4,16 @@
   const API_BASE = 'https://tf-license-device-api.wiliejonathan1999.workers.dev';
   const LICENSE_ENDPOINT_POINTER_URL = 'https://raw.githubusercontent.com/wiliejonathan/tf-analyzer-admin/main/license-endpoint.json';
   const LICENSE_DIRECT_FALLBACK_URL = 'https://script.google.com/macros/s/AKfycbzUbx40vGvuCS4hQEOdfs-DeSU_TY-9zWXXPZzOKn3D9h0m5pQQYD6GGNCefufvsrv2eA/exec';
-  const LICENSE_ANDROID_RELAY_URL = 'https://wiliejonathan.github.io/tf-analyzer-analyst-ios/activation-proxy.html?rev=391';
+  const LICENSE_ANDROID_RELAY_URL = 'https://wiliejonathan.github.io/tf-analyzer-analyst-ios/activation-proxy.html?rev=392';
   const LICENSE_WATCH_MS = 60000;
   // Keep the REV351 key so users who already activated on v1.16.67 migrate automatically.
   const AUTH_KEY = 'tfMobileRememberedLicenseV351';
   const APP_SCRIPTS = [
-    'mobile-chrome-shim.js?rev=391',
-    'assets/dashboard-mobile.js?rev=391',
-    'mobile-data-bridge.js?rev=391',
-    'mobile-app-shell.js?rev=391',
-    'mobile-remote.js?rev=391'
+    'mobile-chrome-shim.js?rev=392',
+    'assets/dashboard-mobile.js?rev=392',
+    'mobile-data-bridge.js?rev=392',
+    'mobile-app-shell.js?rev=392',
+    'mobile-remote.js?rev=392'
   ];
 
   let appStarted = false;
@@ -115,7 +115,7 @@
           licenseId: String(body && (body.licenseId || body.license) || '').trim(),
           deviceType: 'MOBILE',
           clientType: 'MOBILE',
-          source: 'REV391_DIRECT_LICENSE_FALLBACK'
+          source: 'REV392_DIRECT_LICENSE_FALLBACK'
         })
       });
       const text = await response.text();
@@ -149,10 +149,14 @@
   }
 
   function isAndroidClient() {
-    try { return /Android/i.test(navigator.userAgent || ''); } catch (_) { return false; }
+    try {
+      const ua = navigator.userAgent || '';
+      const protocol = String(location && location.protocol || '').toLowerCase();
+      return /Android/i.test(ua) || protocol === 'file:' || protocol === 'content:';
+    } catch (_) { return false; }
   }
 
-  async function androidRelayLicenseLookup(body, timeoutMs = 30000) {
+  async function androidRelayLicenseLookup(body, timeoutMs = 30000, path = '/mobile/login') {
     return await new Promise((resolve, reject) => {
       const id = 'tf-relay-' + Date.now() + '-' + Math.random().toString(36).slice(2);
       const iframe = document.createElement('iframe');
@@ -175,6 +179,7 @@
             iframe.contentWindow.postMessage({
               type: 'TF_LICENSE_RELAY_LOOKUP',
               id,
+              path: isLicenseFallbackPath(path) ? path : '/mobile/login',
               body: {
                 email: cleanEmail(body && body.email),
                 token: normalizeToken(body && body.token),
@@ -203,9 +208,9 @@
     });
   }
 
-  async function licenseFallbackLookup(body, timeoutMs = 30000) {
+  async function licenseFallbackLookup(body, timeoutMs = 30000, path = '/mobile/login') {
     if (isAndroidClient()) {
-      try { return await androidRelayLicenseLookup(body, timeoutMs); } catch (_) {}
+      try { return await androidRelayLicenseLookup(body, timeoutMs, path); } catch (_) {}
     }
     return await directLicenseLookup(body, Math.max(timeoutMs, 25000));
   }
@@ -228,8 +233,8 @@
           deviceType: 'MOBILE',
           clientType: 'MOBILE',
           mobilePlatform: platformName(),
-          mobileVersion: '1.17.04',
-          remoteRevision: 'REV391',
+          mobileVersion: '1.17.05',
+          remoteRevision: 'REV392',
           requestNonce: String(Date.now()) + '-' + Math.random().toString(36).slice(2)
         })
       });
@@ -239,20 +244,28 @@
       try { result = JSON.parse(text); }
       catch (_) {
         if (isLicenseFallbackPath(path)) {
-          return await licenseFallbackLookup(body, Math.max(timeoutMs, 30000));
+          return await licenseFallbackLookup(body, Math.max(timeoutMs, 30000), path);
         }
         throw new Error('Respons server bukan JSON.');
       }
 
+      // REV392: Android WebView may receive a legacy/device-session denial even
+      // when the same email+token is valid on iOS/Web. Re-validate through the
+      // GitHub Pages relay + public license lookup before treating it as denial.
+      if (isLicenseFallbackPath(path) && isAndroidClient() &&
+          !(result && result.valid === true && result.sessionValid !== false)) {
+        return await licenseFallbackLookup(body, Math.max(timeoutMs, 30000), path);
+      }
+
       if (isLicenseFallbackPath(path) && shouldUseDirectLicenseFallback(result, response.status)) {
-        return await licenseFallbackLookup(body, Math.max(timeoutMs, 30000));
+        return await licenseFallbackLookup(body, Math.max(timeoutMs, 30000), path);
       }
 
       if (!response.ok && !result.message) result.message = 'HTTP ' + response.status;
       return result;
     } catch (error) {
       if (isLicenseFallbackPath(path) && error && (error.name === 'AbortError' || error.name === 'TypeError')) {
-        return await licenseFallbackLookup(body, Math.max(timeoutMs, 30000));
+        return await licenseFallbackLookup(body, Math.max(timeoutMs, 30000), path);
       }
       throw error;
     } finally {
