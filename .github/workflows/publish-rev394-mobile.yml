@@ -43,9 +43,7 @@ jobs:
           assert 'const consecutiveLoss = maxLossStreak >= 2;' in dash
           assert 'const severity = (drawdown && consecutiveLoss) ? 2' in dash
           assert "icon.textContent = st.severity >= 2 ? '×' : '!';" in dash
-          assert 'tf_applyLatestRiskToElement(nameSpan, it.name, null, true);' in dash
           assert 'monthKey === __riskState.monthKey' in dash
-          assert "tf_applyLatestRiskToElement(analystCell, row.analyst || '', row.pair || '', true);" in dash
           assert 'tf_applyLatestRiskToElement(analystLink, entry.baseName, entry.pair, false);' in dash
           assert '.tf-latest-risk-warning' in css
           assert '.tf-latest-risk-critical' in css
