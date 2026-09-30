@@ -1,23 +1,23 @@
-const CACHE='tf-analyzer-analyst-mobile-rev412-equity-isignal-overview';
+const CACHE='tf-analyzer-analyst-mobile-rev413-equity-chart-restore';
 const ASSETS=[
-  './assets/dashboard-mobile.js?rev=412',
-  './assets/dashboard-original.css?rev=412',
+  './assets/dashboard-mobile.js?rev=413',
+  './assets/dashboard-original.css?rev=413',
   './icon32.png',
   './icons/icon-180.png',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './index.html',
   './manifest.webmanifest',
-  './mobile-app-shell.js?rev=412',
-  './mobile-remote.js?rev=412',
-  './mobile-chrome-shim.js?rev=412',
-  './mobile-data-bridge.js?rev=412',
-  './mobile-force-update.js?rev=412',
-  './mobile-license-gate.js?rev=412',
-  './activation-proxy.html?rev=412',
-  './mobile-remote-dashboard-home-hotfix.js?rev=412',
-  './mobile-import-fix-v30.js?rev=412',
-  './mobile-overrides.css?rev=412'
+  './mobile-app-shell.js?rev=413',
+  './mobile-remote.js?rev=413',
+  './mobile-chrome-shim.js?rev=413',
+  './mobile-data-bridge.js?rev=413',
+  './mobile-force-update.js?rev=413',
+  './mobile-license-gate.js?rev=413',
+  './activation-proxy.html?rev=413',
+  './mobile-remote-dashboard-home-hotfix.js?rev=413',
+  './mobile-import-fix-v30.js?rev=413',
+  './mobile-overrides.css?rev=413'
 ];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
