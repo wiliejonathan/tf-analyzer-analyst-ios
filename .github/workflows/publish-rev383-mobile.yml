@@ -1,0 +1,74 @@
+name: Publish iOS Browser REV383 holding analytics
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'release-staging/REV383-mobile/READY'
+permissions:
+  contents: write
+concurrency:
+  group: publish-mobile-rev383
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate REV383 source
+        run: |
+          set -euo pipefail
+          node --check assets/dashboard-mobile.js
+          node --check mobile-data-bridge.js
+          node --check mobile-remote.js
+          node --check mobile-license-gate.js
+          node --check mobile-force-update.js
+          node --check service-worker.js
+          python3 - <<'PY'
+          from pathlib import Path
+          d=Path('assets/dashboard-mobile.js').read_text()
+          css=Path('mobile-overrides.css').read_text()
+          idx=Path('index.html').read_text()
+          sw=Path('service-worker.js').read_text()
+          gate=Path('mobile-license-gate.js').read_text()
+          upd=Path('mobile-force-update.js').read_text()
+          assert 'tf-holding-period-section' in d
+          assert 'TABLE ANALYTICS' in d
+          assert 'Nama Analis - Pair' in d
+          assert 'function tf_getHoldingDurationMs' in d
+          assert 'function tf_renderHoldingPeriodTables' in d
+          assert 'const tf_holdingAllTickerRows = baseRows.slice();' in d
+          assert 'tf_filterRowsByUnifiedDate(baseRows)' in d
+          assert 'overflow:visible!important' in css
+          assert '.tf-holding-table th:nth-child(2),.tf-holding-table th:nth-child(3){width:26%;text-align:center!important}' in css
+          assert '?rev=383' in idx and '?rev=382' not in idx
+          assert '?rev=383' in sw and 'rev383-holding-ui-fix' in sw
+          assert '?rev=383' in gate and '?rev=382' not in gate
+          assert "var CURRENT_TAG = 'v1.16.96';" in upd
+          print('REV383 mobile validation PASS')
+          PY
+      - name: Build iOS/browser bundle
+        run: |
+          set -euo pipefail
+          source release-staging/REV383-mobile/release.env
+          rm -f "/tmp/$ASSET" "/tmp/$ASSET.sha256"
+          zip -qr "/tmp/$ASSET" . -x '.git/*' '.github/*' 'release-staging/*' 'audit/*'
+          unzip -t "/tmp/$ASSET" >/dev/null
+          SHA=$(sha256sum "/tmp/$ASSET" | awk '{print $1}')
+          printf '%s  %s\n' "$SHA" "$ASSET" > "/tmp/$ASSET.sha256"
+          echo "MOBILE_SHA256=$SHA" >> "$GITHUB_ENV"
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          source release-staging/REV383-mobile/release.env
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --target "$GITHUB_SHA" --title "$TITLE" --notes-file release-staging/REV383-mobile/RELEASE_NOTES.md --latest
+            gh release upload "$TAG" "/tmp/$ASSET" "/tmp/$ASSET.sha256" --clobber
+          else
+            gh release create "$TAG" "/tmp/$ASSET" "/tmp/$ASSET.sha256" --target "$GITHUB_SHA" --title "$TITLE" --notes-file release-staging/REV383-mobile/RELEASE_NOTES.md --latest
+          fi
+          echo "Published $TAG SHA256=$MOBILE_SHA256"
