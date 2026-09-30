@@ -12093,8 +12093,10 @@ totalTbody.appendChild(trLoss);
 function loadFromChromeStorageIfAvailable() {
 const hasChromeAPI = typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local;
 if (!hasChromeAPI)
-return;
+return Promise.resolve(false);
+return new Promise((resolve,reject)=>{
 chrome.storage.local.get(['tfMonthlyStats', 'tfHistorySignals', 'tfAnalystSources', 'tfNoDataPairs', 'tfAvgSlPips'], (data) => {
+try {
 const rawMonthlyStats = data.tfMonthlyStats || {};
 const rawHistory = data.tfHistorySignals || [];
 const rawSources = data.tfAnalystSources || {};
@@ -12145,6 +12147,9 @@ rebuildAnalystListFromSources();
 setupAnalystTickerFilter();
 applyAnalystPairFilterAll();
 setupHistoryForm();
+resolve(true);
+}catch(e){reject(e);}
+});
 });
 }
 function applyHistoryTableScroll() {

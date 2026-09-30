@@ -661,27 +661,12 @@ async function tfMobileRecoverRenderV31(reason){
         if(typeof selectedAnalystsGlobal!=='undefined')selectedAnalystsGlobal=null;
       }catch(_){ }
 
-      if(typeof loadFromChromeStorageIfAvailable==='function'){
-        try{
-          const maybe=loadFromChromeStorageIfAvailable();
-          if(maybe&&typeof maybe.then==='function'){
-            await Promise.race([maybe,new Promise(r=>setTimeout(r,140))]);
-          }else{
-            await new Promise(r=>setTimeout(r,90));
-          }
-        }catch(_){
-          await new Promise(r=>setTimeout(r,90));
-        }
-      }
-
-      try{
-        if(typeof rebuildAnalystListFromSources==='function')rebuildAnalystListFromSources();
-        if(typeof setupAnalystTickerFilter==='function')setupAnalystTickerFilter();
-        if(typeof applyAnalystPairFilterAll==='function')applyAnalystPairFilterAll();
-        if(typeof recomputeHistoryRows==='function')recomputeHistoryRows();
-        if(typeof renderSummaryTable==='function')renderSummaryTable();
-        if(typeof window.tfRenderScoreHistory==='function')window.tfRenderScoreHistory();
-      }catch(e){console.warn('TF Mobile REV402 fast render recovery warning',reason,e);}
+      // REV407: the storage loader owns one complete render and resolves afterwards.
+      // Do not run applyAnalystPairFilterAll/recomputeHistoryRows again.
+      if(typeof loadFromChromeStorageIfAvailable!=='function')return false;
+      const loaded=await loadFromChromeStorageIfAvailable();
+      if(loaded===false)return false;
+      if(typeof window.tfRenderScoreHistory==='function')await window.tfRenderScoreHistory();
 
       await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
       const historyRows=[...document.querySelectorAll('#history-table tbody tr:not(.tf-start-balance-row)')].filter(tr=>{
@@ -857,7 +842,7 @@ async function importFiles(files,opts={}){
     tfMobileUpdateImportLoading("Menyimpan data…",trades?`${trades.toLocaleString("id-ID")} trade sedang disiapkan.`:"Menyimpan data ke perangkat.");
     await applyPayload(payload,fileNames,{fastImport:true});
 
-    const elapsed=Math.max(0,(performance.now()-started)/1000);
+    let elapsed=Math.max(0,(performance.now()-started)/1000);
     status(`Import selesai • ${trades.toLocaleString("id-ID")} trade • ${elapsed.toFixed(1)} dtk`,true);
     tfMobileUpdateImportLoading("Membangun dashboard…","Menyiapkan Table 1, Performance, Table 2, Equity, Table 3, dan Table 4.");
 
@@ -878,6 +863,7 @@ async function importFiles(files,opts={}){
       rendered?'Data berhasil dimuat':'Data import tersimpan',
       rendered?'Dashboard sudah diperbarui tanpa refresh.':'Data tersimpan. Buka Table 1/Table 3 untuk memicu render ulang.'
     );
+    elapsed=Math.max(0,(performance.now()-started)/1000);
     status(`Import selesai • ${trades.toLocaleString("id-ID")} trade • ${elapsed.toFixed(1)} dtk`,true);
     // REV340: after a successful JSON import, close the Data sheet and return
     // the user to Table 1. No activation/reload cycle is triggered.
