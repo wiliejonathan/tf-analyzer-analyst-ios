@@ -51,7 +51,11 @@ function tf_renderHoldingPeriodTables"""
 s,n=pat1.subn(lambda _:helpers,s,count=1)
 assert n==1,'holding helper block not found'
 
-pat2=re.compile(r"function tf_renderHoldingPeriodTables\(allTickerRows, filteredRows\) \{.*?\n\}\nfunction recomputeHistoryRows\(\) \{",re.S)
+render_start=s.find("function tf_renderHoldingPeriodTables")
+render_end=s.find("function recomputeHistoryRows()",render_start)
+assert render_start>=0 and render_end>render_start,'holding renderer boundaries not found'
+recompute_open=s.find("{",render_end)
+assert recompute_open>render_end,'recomputeHistoryRows opening brace not found'
 render=r"""function tf_renderHoldingPeriodTables(tableRows) {
 const leftBody=document.getElementById('tf-holding-body-left');
 const rightBody=document.getElementById('tf-holding-body-right');
@@ -73,8 +77,7 @@ subset.forEach(name=>{const tr=document.createElement('tr');const n=document.cre
 const splitAt=Math.ceil(names.length/2);renderSide(leftBody,names.slice(0,splitAt));renderSide(rightBody,names.slice(splitAt));
 }
 function recomputeHistoryRows() {"""
-s,n=pat2.subn(lambda _:render,s,count=1)
-assert n==1,'holding renderer not found'
+s=s[:render_start]+render+s[recompute_open+1:]
 
 old="""const tf_holdingAllTickerRows = baseRows.slice();
 try {
