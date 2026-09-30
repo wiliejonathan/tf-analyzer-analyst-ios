@@ -2,15 +2,17 @@
   'use strict';
 
   const API_BASE = 'https://tf-license-device-api.wiliejonathan1999.workers.dev';
+  const LICENSE_ENDPOINT_POINTER_URL = 'https://raw.githubusercontent.com/wiliejonathan/tf-analyzer-admin/main/license-endpoint.json';
+  const LICENSE_DIRECT_FALLBACK_URL = 'https://script.google.com/macros/s/AKfycbzUbx40vGvuCS4hQEOdfs-DeSU_TY-9zWXXPZzOKn3D9h0m5pQQYD6GGNCefufvsrv2eA/exec';
   const LICENSE_WATCH_MS = 60000;
   // Keep the REV351 key so users who already activated on v1.16.67 migrate automatically.
   const AUTH_KEY = 'tfMobileRememberedLicenseV351';
   const APP_SCRIPTS = [
-    'mobile-chrome-shim.js?rev=387',
-    'assets/dashboard-mobile.js?rev=387',
-    'mobile-data-bridge.js?rev=387',
-    'mobile-app-shell.js?rev=387',
-    'mobile-remote.js?rev=387'
+    'mobile-chrome-shim.js?rev=390',
+    'assets/dashboard-mobile.js?rev=390',
+    'mobile-data-bridge.js?rev=390',
+    'mobile-app-shell.js?rev=390',
+    'mobile-remote.js?rev=390'
   ];
 
   let appStarted = false;
@@ -44,6 +46,107 @@
     return 'Web Browser • TF Analyzer';
   }
 
+  function isLicenseFallbackPath(path) {
+    return path === '/mobile/login' || path === '/license-check';
+  }
+
+  function shouldUseDirectLicenseFallback(result, httpStatus) {
+    const code = String(result && (result.code || result.error) || '').trim().toUpperCase();
+    if ([
+      'APPS_SCRIPT_HTTP_ERROR',
+      'APPS_SCRIPT_TIMEOUT',
+      'APPS_SCRIPT_NETWORK_ERROR',
+      'APPS_SCRIPT_INVALID_RESPONSE',
+      'APPS_SCRIPT_ERROR'
+    ].includes(code)) return true;
+    return Number(httpStatus || 0) >= 500;
+  }
+
+  async function resolveDirectLicenseUrl() {
+    let resolved = LICENSE_DIRECT_FALLBACK_URL;
+    const controller = typeof AbortController === 'function' ? new AbortController() : null;
+    const timer = setTimeout(() => {
+      try { controller && controller.abort(); } catch (_) {}
+    }, 5000);
+    try {
+      const response = await fetch(LICENSE_ENDPOINT_POINTER_URL + '?t=' + Date.now(), {
+        method: 'GET',
+        cache: 'no-store',
+        redirect: 'follow',
+        signal: controller ? controller.signal : undefined,
+        headers: { 'Accept': 'application/json' }
+      });
+      if (response.ok) {
+        const pointer = await response.json();
+        const candidate = String(pointer && pointer.apiUrl || '').trim();
+        if (/^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/i.test(candidate)) {
+          resolved = candidate;
+        }
+      }
+    } catch (_) {
+      // Hardcoded current endpoint remains the fallback if GitHub pointer is unavailable.
+    } finally {
+      clearTimeout(timer);
+    }
+    return resolved;
+  }
+
+  async function directLicenseLookup(body, timeoutMs = 25000) {
+    const url = await resolveDirectLicenseUrl();
+    const controller = typeof AbortController === 'function' ? new AbortController() : null;
+    const timer = setTimeout(() => {
+      try { controller && controller.abort(); } catch (_) {}
+    }, Math.max(8000, timeoutMs));
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        cache: 'no-store',
+        redirect: 'follow',
+        signal: controller ? controller.signal : undefined,
+        headers: {
+          'Content-Type': 'text/plain;charset=UTF-8',
+          'Accept': 'application/json,text/plain;q=0.9,*/*;q=0.1'
+        },
+        body: JSON.stringify({
+          action: 'lookup',
+          email: cleanEmail(body && body.email),
+          token: normalizeToken(body && body.token),
+          licenseId: String(body && (body.licenseId || body.license) || '').trim(),
+          deviceType: 'MOBILE',
+          clientType: 'MOBILE',
+          source: 'REV390_DIRECT_LICENSE_FALLBACK'
+        })
+      });
+      const text = await response.text();
+      let result;
+      try { result = JSON.parse(text); }
+      catch (_) { throw new Error('Respons fallback lisensi bukan JSON.'); }
+      if (!response.ok) {
+        const err = new Error(String(result && result.message || ('Fallback Apps Script HTTP ' + response.status)));
+        err.code = String(result && result.code || 'DIRECT_APPS_SCRIPT_HTTP_ERROR');
+        throw err;
+      }
+      if (result && result.valid === true) {
+        return {
+          ...result,
+          ok: true,
+          valid: true,
+          sessionValid: true,
+          portableSession: true,
+          tokenGate: true,
+          noDeviceLimit: true,
+          mobileApprovalRequired: false,
+          fallbackTransport: 'DIRECT_APPS_SCRIPT_PUBLIC_LOOKUP',
+          code: 'MOBILE_TOKEN_LOGIN_OK_FALLBACK',
+          message: 'Token valid. Aktivasi menggunakan server lisensi cadangan.'
+        };
+      }
+      return result || { ok:true, valid:false, code:'LICENSE_NOT_FOUND', message:'Email atau token tidak ditemukan.' };
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   async function api(path, body, timeoutMs = 15000) {
     const controller = typeof AbortController === 'function' ? new AbortController() : null;
     const timeout = setTimeout(() => {
@@ -62,8 +165,8 @@
           deviceType: 'MOBILE',
           clientType: 'MOBILE',
           mobilePlatform: platformName(),
-          mobileVersion: '1.0.110',
-          remoteRevision: 'REV368',
+          mobileVersion: '1.17.03',
+          remoteRevision: 'REV390',
           requestNonce: String(Date.now()) + '-' + Math.random().toString(36).slice(2)
         })
       });
@@ -71,9 +174,24 @@
       const text = await response.text();
       let result;
       try { result = JSON.parse(text); }
-      catch (_) { throw new Error('Respons server bukan JSON.'); }
+      catch (_) {
+        if (isLicenseFallbackPath(path)) {
+          return await directLicenseLookup(body, Math.max(timeoutMs, 25000));
+        }
+        throw new Error('Respons server bukan JSON.');
+      }
+
+      if (isLicenseFallbackPath(path) && shouldUseDirectLicenseFallback(result, response.status)) {
+        return await directLicenseLookup(body, Math.max(timeoutMs, 25000));
+      }
+
       if (!response.ok && !result.message) result.message = 'HTTP ' + response.status;
       return result;
+    } catch (error) {
+      if (isLicenseFallbackPath(path) && error && (error.name === 'AbortError' || error.name === 'TypeError')) {
+        return await directLicenseLookup(body, Math.max(timeoutMs, 25000));
+      }
+      throw error;
     } finally {
       clearTimeout(timeout);
     }
