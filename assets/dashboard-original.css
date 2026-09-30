@@ -382,3 +382,29 @@ html:not([data-tf-server-authorized="1"])body{overflow:hidden!important;backgrou
   color:#ef4444 !important;
   -webkit-text-fill-color:#ef4444 !important;
 }
+
+
+/* REV403 — Table 3/Table 4 column sizing polish. */
+/* Table 3 Nama Analis: expand with content so long analyst names never spill outside the cell. */
+#history-table td[data-history-col="analyst"]{
+  width:max-content !important;
+  min-width:190px !important;
+  max-width:none !important;
+  white-space:nowrap !important;
+  overflow:visible !important;
+  padding-left:10px !important;
+  padding-right:10px !important;
+}
+/* Table 4: reduce the oversized Nama Analis column and rebalance the remaining space. */
+.tf-score-summary-table th:nth-child(1),
+.tf-score-summary-table td:nth-child(1){
+  width:44% !important;
+}
+.tf-score-summary-table th:nth-child(2),
+.tf-score-summary-table td:nth-child(2){
+  width:38% !important;
+}
+.tf-score-summary-table th:nth-child(3),
+.tf-score-summary-table td:nth-child(3){
+  width:18% !important;
+}
