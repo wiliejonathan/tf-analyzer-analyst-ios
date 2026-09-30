@@ -4586,6 +4586,12 @@ if (st.drawdown) return 'WARNING' + month + ': Drawdown';
 if (st.consecutiveLoss) return 'WARNING' + month + ': Consecutive Loss';
 return 'HEALTHY' + month + ': No Drawdown / Consecutive Loss';
 }
+function tf_createAnalystNameColorTarget(text) {
+const span=document.createElement('span');
+span.className='tf-analyst-name-color-target';
+span.textContent=String(text || '');
+return span;
+}
 function tf_forceLatestRiskTextColor(el, st) {
 try {
 if (!el || !st) return;
@@ -4601,6 +4607,7 @@ if (child.style) child.style.setProperty('color', color, 'important');
 catch (e) { }
 }
 
+// REV399 dedicated analyst-name span prevents later table/sticky renderers from restoring white.
 // REV398: analyst-name color is written inline with !important so table/sticky
 // selectors can no longer override green/yellow/red with white.
 function tf_applyLatestRiskToElement(el, analyst, pair, showIcon, iconPosition) {
@@ -4649,7 +4656,7 @@ try {
 const scope=root && root.querySelectorAll ? root : document;
 const apply=(el, analyst, pair) => {
 if (!el) return;
-const name=String(analyst || el.getAttribute('data-analyst') || el.title || el.textContent || '').trim();
+const name=String(el.getAttribute('data-analyst') || analyst || el.title || (el.querySelector && el.querySelector('.tf-analyst-name-color-target') ? el.querySelector('.tf-analyst-name-color-target').textContent : el.textContent) || '').trim();
 if (!name || /^withdraw$/i.test(name)) return;
 const st = tf_applyLatestRiskColorOnly(el,name,pair || null);
 if (st) tf_forceLatestRiskTextColor(el, st);
@@ -4796,8 +4803,8 @@ let lot = roundLotToTwoDecimals(rawLot);
 const tr = document.createElement('tr');
 const nameCell = document.createElement('td');
 nameCell.setAttribute('data-analyst', baseName);
-nameCell.textContent = a.baseName || a.name;
 nameCell.classList.add('monthly-sticky-col-2','tf-risk-name-left');
+nameCell.appendChild(tf_createAnalystNameColorTarget(a.baseName || a.name));
 tf_applyLatestRiskToElement(nameCell, baseName, rowPair, true, 'left');
 tr.appendChild(nameCell);
 const pairCell = document.createElement('td');
@@ -5896,9 +5903,9 @@ actionCell.appendChild(btn);
 tr.appendChild(actionCell);
 const nameCell = document.createElement('td');
 nameCell.setAttribute('data-analyst', String(a.baseName || a.name || '').trim());
-nameCell.textContent = formatAnalystDisplayName(a.baseName || a.name);
 nameCell.removeAttribute('title');
 nameCell.classList.add('monthly-sticky-col-2');
+nameCell.appendChild(tf_createAnalystNameColorTarget(formatAnalystDisplayName(a.baseName || a.name)));
 tf_applyLatestRiskToElement(nameCell, a.baseName || a.name, null, false);
 tr.appendChild(nameCell);
 const pairCell = document.createElement('td');
@@ -6740,9 +6747,12 @@ tr.appendChild(dateCell);
 const analystCell = tf_markHistoryCell(document.createElement('td'), 'analyst');
 if (!isWithdrawRow) analystCell.setAttribute('data-analyst', String(row.analyst || '').trim());
 analystCell.classList.add('tf-risk-name-left');
-analystCell.textContent = isWithdrawRow ? 'Withdraw' : formatAnalystDisplayName(row.analyst || '');
 analystCell.title = isWithdrawRow ? 'Withdraw' : String(row.analyst || '').trim();
-if (!isWithdrawRow) tf_applyLatestRiskToElement(analystCell, row.analyst || '', row.pair || '', true, 'left');
+if (isWithdrawRow) analystCell.textContent = 'Withdraw';
+else {
+analystCell.appendChild(tf_createAnalystNameColorTarget(formatAnalystDisplayName(row.analyst || '')));
+tf_applyLatestRiskToElement(analystCell, row.analyst || '', row.pair || '', true, 'left');
+}
 tr.appendChild(analystCell);
 const balanceCompoundCell = tf_markHistoryCell(document.createElement('td'), 'balance');
 balanceCompoundCell.classList.add('text-right', 'mono');
@@ -17775,7 +17785,7 @@ showError('');
     body.innerHTML = analysts.map(({name, records, latest}) => {
       const isOpen = expanded.has(name);
       const enc = encodeURIComponent(name);
-      const summary = '<tr class="tf-score-summary-row"><td class="tf-score-analyst" data-analyst="' + esc(name) + '">' + esc(name) + '</td><td class="tf-score-average-cell">' + scoreText(latest.averageScore, latest.averageScoreText) + '</td><td><a href="#" class="tf-score-detail-link" data-score-detail="' + enc + '">' + (isOpen ? 'Tutup' : 'Detail') + '</a></td></tr>';
+      const summary = '<tr class="tf-score-summary-row"><td class="tf-score-analyst" data-analyst="' + esc(name) + '"><span class="tf-analyst-name-color-target">' + esc(name) + '</span></td><td class="tf-score-average-cell">' + scoreText(latest.averageScore, latest.averageScoreText) + '</td><td><a href="#" class="tf-score-detail-link" data-score-detail="' + enc + '">' + (isOpen ? 'Tutup' : 'Detail') + '</a></td></tr>';
       const detail = isOpen ? '<tr class="tf-score-expanded-row"><td colspan="3">' + detailTable(records) + '</td></tr>' : '';
       return summary + detail;
     }).join('');
