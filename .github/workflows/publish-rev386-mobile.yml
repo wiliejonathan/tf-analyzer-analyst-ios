@@ -1,0 +1,60 @@
+name: Publish iOS Browser REV386 holding final accuracy
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'release-staging/REV386-mobile/READY'
+permissions:
+  contents: write
+concurrency:
+  group: publish-mobile-rev386
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate REV386 source
+        run: |
+          set -euo pipefail
+          node --check assets/dashboard-mobile.js
+          node --check mobile-data-bridge.js
+          node --check mobile-remote.js
+          node --check mobile-license-gate.js
+          node --check mobile-force-update.js
+          node --check service-worker.js
+          python3 - <<'PY'
+          from pathlib import Path
+          dash=Path('assets/dashboard-mobile.js').read_text(); idx=Path('index.html').read_text(); sw=Path('service-worker.js').read_text(); gate=Path('mobile-license-gate.js').read_text(); upd=Path('mobile-force-update.js').read_text()
+          assert 'REV386: exact source is the final trade rows rendered/exported by Table 3 after active filters.' in dash
+          assert 'function tf_renderHoldingPeriodTables(tableRows)' in dash
+          assert 'tf_renderHoldingPeriodTables(rowsForUi);' in dash
+          assert 'tf_holdingAllTickerRows' not in dash
+          assert 'tf_parseHistoryTableDateMs(row.createdDate)' in dash and 'tf_parseHistoryTableDateMs(row.displayDate)' in dash
+          assert '?rev=386' in idx and '?rev=386' in sw and '?rev=386' in gate
+          assert "var CURRENT_TAG = 'v1.16.99';" in upd
+          print('REV386 mobile QA PASS')
+          PY
+      - name: Build bundle
+        run: |
+          set -euo pipefail
+          source release-staging/REV386-mobile/release.env
+          zip -qr "/tmp/$ASSET" . -x '.git/*' '.github/*' 'release-staging/*' 'audit/*'
+          unzip -tq "/tmp/$ASSET"
+          SHA=$(sha256sum "/tmp/$ASSET" | awk '{print $1}')
+          printf '%s  %s\n' "$SHA" "$ASSET" > "/tmp/$ASSET.sha256"
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          source release-staging/REV386-mobile/release.env
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --target "$GITHUB_SHA" --title "$TITLE" --notes-file release-staging/REV386-mobile/RELEASE_NOTES.md --latest
+            gh release upload "$TAG" "/tmp/$ASSET" "/tmp/$ASSET.sha256" --clobber
+          else
+            gh release create "$TAG" "/tmp/$ASSET" "/tmp/$ASSET.sha256" --target "$GITHUB_SHA" --title "$TITLE" --notes-file release-staging/REV386-mobile/RELEASE_NOTES.md --latest
+          fi
