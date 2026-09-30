@@ -47,7 +47,7 @@ jobs:
           assert 'function tf_applyLatestRiskPairIconOnly' in dash
           assert "tf_applyLatestRiskToElement(nameCell, a.baseName || a.name, null, false);" in dash
           assert "tf_applyLatestRiskToElement(analystCell, row.analyst || '', row.pair || '', true, 'left');" in dash
-                    assert "tf_applyLatestRiskToElement(n,name.slice(0,sep),name.slice(sep+3),true,'left');" in dash
+          assert "tf_applyLatestRiskToElement(n,name.slice(0,sep),name.slice(sep+3),true,'left');" in dash
           assert "tf_applyLatestRiskToElement(analystLink, entry.baseName, null, false);" in dash
           assert "tf_applyLatestRiskToElement(nameSpan, name, null, false);" in dash
           assert "icon.textContent = st.severity >= 2 ? '×' : (st.severity === 1 ? '!' : '✓');" in dash
