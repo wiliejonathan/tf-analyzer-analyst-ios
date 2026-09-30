@@ -4586,6 +4586,23 @@ if (st.drawdown) return 'WARNING' + month + ': Drawdown';
 if (st.consecutiveLoss) return 'WARNING' + month + ': Consecutive Loss';
 return 'HEALTHY' + month + ': No Drawdown / Consecutive Loss';
 }
+function tf_forceLatestRiskTextColor(el, st) {
+try {
+if (!el || !st) return;
+const color = st.severity >= 2 ? '#ef4444' : (st.severity === 1 ? '#facc15' : '#22c55e');
+el.style && el.style.setProperty('color', color, 'important');
+if (el.querySelectorAll) {
+el.querySelectorAll('*').forEach((child) => {
+if (!child || (child.matches && child.matches('[data-tf-latest-risk-icon="1"], [data-tf-latest-risk-icon="1"] *'))) return;
+if (child.style) child.style.setProperty('color', color, 'important');
+});
+}
+}
+catch (e) { }
+}
+
+// REV398: analyst-name color is written inline with !important so table/sticky
+// selectors can no longer override green/yellow/red with white.
 function tf_applyLatestRiskToElement(el, analyst, pair, showIcon, iconPosition) {
 try {
 if (!el) return null;
@@ -4594,6 +4611,7 @@ el.classList.remove('tf-latest-risk-healthy','tf-latest-risk-warning','tf-latest
 el.querySelectorAll && el.querySelectorAll('[data-tf-latest-risk-icon="1"]').forEach((x) => x.remove());
 if (!st) return null;
 el.classList.add(st.severity >= 2 ? 'tf-latest-risk-critical' : (st.severity === 1 ? 'tf-latest-risk-warning' : 'tf-latest-risk-healthy'));
+tf_forceLatestRiskTextColor(el, st);
 if (showIcon !== false) {
 const icon = document.createElement('span');
 icon.setAttribute('data-tf-latest-risk-icon','1');
@@ -4619,6 +4637,7 @@ const st=tf_getLatestRiskState(analyst, pair);
 el.classList.remove('tf-latest-risk-healthy','tf-latest-risk-warning','tf-latest-risk-critical');
 if (!st) return null;
 el.classList.add(st.severity >= 2 ? 'tf-latest-risk-critical' : (st.severity === 1 ? 'tf-latest-risk-warning' : 'tf-latest-risk-healthy'));
+tf_forceLatestRiskTextColor(el, st);
 return st;
 } catch (e) { return null; }
 }
@@ -4632,7 +4651,8 @@ const apply=(el, analyst, pair) => {
 if (!el) return;
 const name=String(analyst || el.getAttribute('data-analyst') || el.title || el.textContent || '').trim();
 if (!name || /^withdraw$/i.test(name)) return;
-tf_applyLatestRiskColorOnly(el,name,pair || null);
+const st = tf_applyLatestRiskColorOnly(el,name,pair || null);
+if (st) tf_forceLatestRiskTextColor(el, st);
 };
 scope.querySelectorAll('.tf-perf-name-text').forEach((el)=>apply(el,el.title || el.textContent,null));
 scope.querySelectorAll('.tf-holding-analyst').forEach((el)=>{
@@ -4654,12 +4674,32 @@ const pairEl=row ? row.querySelector('td[data-history-col="pair"]') : null;
 apply(el,el.title || el.textContent,pairEl ? pairEl.textContent : null);
 });
 scope.querySelectorAll('#drawdown-table tbody tr').forEach((row)=>{
-const el=row && row.children ? row.children[0] : null;
+const el=row && row.children ? (row.children[1] || row.children[0]) : null;
 if (el) apply(el,el.textContent,null);
 });
 scope.querySelectorAll('.tf-score-analyst').forEach((el)=>apply(el,el.textContent,null));
 scope.querySelectorAll('.tf-isignal-analyst-name,.tf-users-analyst-link').forEach((el)=>apply(el,el.getAttribute('data-analyst') || el.title || el.textContent,null));
 scope.querySelectorAll('.analyst-filter-name').forEach((el)=>apply(el,el.title || el.textContent,null));
+
+// REV398 exact table pass: Table 1, Table 2, Table 3 and Table 4 analyst cells.
+scope.querySelectorAll('#summary-table tbody tr').forEach((row)=>{
+const el=row ? row.querySelector('td.monthly-sticky-col-2') : null;
+const pair=row&&row.children[1] ? String(row.children[1].textContent||'').trim() : null;
+if(el) apply(el,el.getAttribute('data-analyst') || el.title || el.textContent,pair);
+});
+scope.querySelectorAll('#monthly-table tbody tr').forEach((row)=>{
+const el=row ? row.querySelector('td.monthly-sticky-col-2') : null;
+const pair=row&&row.children[2] ? String(row.children[2].textContent||'').trim() : null;
+if(el) apply(el,el.getAttribute('data-analyst') || el.title || el.textContent,pair);
+});
+scope.querySelectorAll('#history-table tbody tr').forEach((row)=>{
+const el=row ? row.querySelector('td[data-history-col="analyst"]') : null;
+const pairEl=row ? row.querySelector('td[data-history-col="pair"]') : null;
+if(el) apply(el,el.getAttribute('data-analyst') || el.title || el.textContent,pairEl ? pairEl.textContent : null);
+});
+scope.querySelectorAll('#tf-score-summary-body .tf-score-analyst, .tf-score-summary-table .tf-score-analyst').forEach((el)=>{
+apply(el,el.getAttribute('data-analyst') || el.title || el.textContent,null);
+});
 } catch (e) { }
 }
 
@@ -4755,6 +4795,7 @@ let rawLot = (effectiveSlPips > 0 && dollarPerPip > 0 && Number.isFinite(riskPer
 let lot = roundLotToTwoDecimals(rawLot);
 const tr = document.createElement('tr');
 const nameCell = document.createElement('td');
+nameCell.setAttribute('data-analyst', baseName);
 nameCell.textContent = a.baseName || a.name;
 nameCell.classList.add('monthly-sticky-col-2','tf-risk-name-left');
 tf_applyLatestRiskToElement(nameCell, baseName, rowPair, true, 'left');
@@ -5854,6 +5895,7 @@ refreshAnalystFromDashboard(baseName, pair, btn);
 actionCell.appendChild(btn);
 tr.appendChild(actionCell);
 const nameCell = document.createElement('td');
+nameCell.setAttribute('data-analyst', String(a.baseName || a.name || '').trim());
 nameCell.textContent = formatAnalystDisplayName(a.baseName || a.name);
 nameCell.removeAttribute('title');
 nameCell.classList.add('monthly-sticky-col-2');
@@ -6696,6 +6738,7 @@ dateCell.classList.add('mono');
 dateCell.textContent = row.displayDate || row.createdDate || '';
 tr.appendChild(dateCell);
 const analystCell = tf_markHistoryCell(document.createElement('td'), 'analyst');
+if (!isWithdrawRow) analystCell.setAttribute('data-analyst', String(row.analyst || '').trim());
 analystCell.classList.add('tf-risk-name-left');
 analystCell.textContent = isWithdrawRow ? 'Withdraw' : formatAnalystDisplayName(row.analyst || '');
 analystCell.title = isWithdrawRow ? 'Withdraw' : String(row.analyst || '').trim();
@@ -17732,7 +17775,7 @@ showError('');
     body.innerHTML = analysts.map(({name, records, latest}) => {
       const isOpen = expanded.has(name);
       const enc = encodeURIComponent(name);
-      const summary = '<tr class="tf-score-summary-row"><td class="tf-score-analyst">' + esc(name) + '</td><td class="tf-score-average-cell">' + scoreText(latest.averageScore, latest.averageScoreText) + '</td><td><a href="#" class="tf-score-detail-link" data-score-detail="' + enc + '">' + (isOpen ? 'Tutup' : 'Detail') + '</a></td></tr>';
+      const summary = '<tr class="tf-score-summary-row"><td class="tf-score-analyst" data-analyst="' + esc(name) + '">' + esc(name) + '</td><td class="tf-score-average-cell">' + scoreText(latest.averageScore, latest.averageScoreText) + '</td><td><a href="#" class="tf-score-detail-link" data-score-detail="' + enc + '">' + (isOpen ? 'Tutup' : 'Detail') + '</a></td></tr>';
       const detail = isOpen ? '<tr class="tf-score-expanded-row"><td colspan="3">' + detailTable(records) + '</td></tr>' : '';
       return summary + detail;
     }).join('');
