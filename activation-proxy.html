@@ -17,7 +17,7 @@
     }catch(_){}
     const ctrl=new AbortController(); const timer=setTimeout(()=>ctrl.abort(),Math.max(8000,timeoutMs||25000));
     try{
-      const r=await fetch(url,{method:'POST',cache:'no-store',redirect:'follow',signal:ctrl.signal,headers:{'Content-Type':'text/plain;charset=UTF-8','Accept':'application/json,text/plain;q=0.9,*/*;q=0.1'},body:JSON.stringify({action:'lookup',email:clean(body.email),token:clean(body.token),licenseId:String(body.licenseId||body.license||'').trim(),deviceType:'MOBILE',clientType:'MOBILE',source:'REV398_ANDROID_WEB_RELAY'})});
+      const r=await fetch(url,{method:'POST',cache:'no-store',redirect:'follow',signal:ctrl.signal,headers:{'Content-Type':'text/plain;charset=UTF-8','Accept':'application/json,text/plain;q=0.9,*/*;q=0.1'},body:JSON.stringify({action:'lookup',email:clean(body.email),token:clean(body.token),licenseId:String(body.licenseId||body.license||'').trim(),deviceType:'MOBILE',clientType:'MOBILE',source:'REV399_ANDROID_WEB_RELAY'})});
       const t=await r.text(); let j; try{j=JSON.parse(t);}catch(_){throw new Error('Respons relay lisensi bukan JSON.');}
       if(!r.ok){const e=new Error(String(j&&j.message||('Apps Script HTTP '+r.status)));e.code=String(j&&j.code||'RELAY_APPS_SCRIPT_HTTP_ERROR');throw e;}
       if(j&&j.valid===true)return {...j,ok:true,valid:true,sessionValid:true,portableSession:true,tokenGate:true,noDeviceLimit:true,mobileApprovalRequired:false,fallbackTransport:'GITHUB_PAGES_ANDROID_RELAY',code:'MOBILE_TOKEN_LOGIN_OK_RELAY'};
@@ -32,7 +32,7 @@
     const safePath=(path==='/license-check')?'/license-check':'/mobile/login';
     const ctrl=new AbortController(); const timer=setTimeout(()=>ctrl.abort(),12000);
     try{
-      const r=await fetch(API_BASE+safePath,{method:'POST',cache:'no-store',redirect:'follow',signal:ctrl.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({...body,deviceType:'MOBILE',clientType:'MOBILE',mobilePlatform:'Android • TF Analyzer Relay',mobileVersion:'1.17.11',remoteRevision:'REV398',requestNonce:String(Date.now())+'-'+Math.random().toString(36).slice(2)})});
+      const r=await fetch(API_BASE+safePath,{method:'POST',cache:'no-store',redirect:'follow',signal:ctrl.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({...body,deviceType:'MOBILE',clientType:'MOBILE',mobilePlatform:'Android • TF Analyzer Relay',mobileVersion:'1.17.12',remoteRevision:'REV399',requestNonce:String(Date.now())+'-'+Math.random().toString(36).slice(2)})});
       const t=await r.text(); let j; try{j=JSON.parse(t);}catch(_){return await direct(body,25000);}
       if(j&&j.valid===true&&j.sessionValid!==false)return j;
       // REV392: any Android denial is re-checked against the public license
