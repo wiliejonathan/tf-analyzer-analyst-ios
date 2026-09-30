@@ -9221,3 +9221,18 @@ html,body.tf-mobile-app,#tf-dashboard-main.page,.tf-mobile-screen{
 
 /* REV406 mobile body alignment takes precedence over sticky rail rules. */
 #tf-dashboard-main #section-summary #summary-table tbody td.monthly-sticky-col-2,#tf-dashboard-main #section-summary #summary-table tbody td:first-child,#tf-dashboard-main #section-monthly #monthly-table tbody td.monthly-sticky-col-2,#tf-dashboard-main #section-history #history-table tbody td[data-history-col="analyst"],#tf-dashboard-main #section-history #drawdown-table tbody tr:not(.dd-child-row)>td:nth-child(2){text-align:left!important;justify-content:flex-start!important;}
+
+/* REV407 risk explanation on dashboard entry */
+body.tf-risk-explainer-open{overflow:hidden!important;}
+#tf-risk-explainer{position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;background:rgba(2,6,23,.93);padding:18px;overflow:auto;}
+#tf-risk-explainer .tf-risk-explainer-card{width:100%;max-width:470px;max-height:calc(100dvh - 36px);overflow:auto;padding:22px;border:1px solid #334155;border-radius:18px;background:#0f172a;color:#e2e8f0;box-sizing:border-box;}
+#tf-risk-explainer h2{font-size:18px;line-height:1.3;margin:0 0 10px;}
+#tf-risk-explainer p{font-size:12px;line-height:1.5;color:#94a3b8;margin:0 0 14px;}
+#tf-risk-explainer .tf-risk-explainer-row{display:flex;flex-direction:column;gap:5px;margin:12px 0;font-size:12px;line-height:1.5;}
+#tf-risk-explainer .tf-risk-explainer-row strong{font-size:15px;}
+#tf-risk-explainer button{width:100%;min-height:44px;margin-top:14px;border:0;border-radius:12px;background:#38bdf8;color:#082f49;font-size:14px;font-weight:700;cursor:pointer;}
+
+#tf-table1-analytics-filter{display:flex!important;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 14px!important;}
+#tf-table1-analytics-filter .tf-time-range-row{width:100%;}
+#tf-table1-analytics-filter label{font-size:11px!important;color:#94a3b8;}
+#tf-table1-analytics-filter select{flex:1;min-width:160px;max-width:100%;min-height:36px;}
