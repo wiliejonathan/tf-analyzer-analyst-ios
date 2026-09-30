@@ -54,9 +54,16 @@ jobs:
         run: |
           set -euo pipefail
           source release-staging/REV387-mobile/release.env
-          if gh release view "$TAG" >/dev/null 2>&1; then
+          if gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" >/dev/null 2>&1; then
             gh release edit "$TAG" --target "$GITHUB_SHA" --title "$TITLE" --notes-file release-staging/REV387-mobile/RELEASE_NOTES.md
-            gh release upload "$TAG" "/tmp/$ASSET" "/tmp/$ASSET.sha256" --clobber
           else
-            gh release create "$TAG" "/tmp/$ASSET" "/tmp/$ASSET.sha256" --target "$GITHUB_SHA" --title "$TITLE" --notes-file release-staging/REV387-mobile/RELEASE_NOTES.md --latest
+            BODY="$(cat release-staging/REV387-mobile/RELEASE_NOTES.md)"
+            gh api --method POST "repos/$GITHUB_REPOSITORY/releases" \
+              -f tag_name="$TAG" \
+              -f target_commitish="$GITHUB_SHA" \
+              -f name="$TITLE" \
+              -f body="$BODY" \
+              -F draft=false \
+              -F prerelease=false >/dev/null
           fi
+          gh release upload "$TAG" "/tmp/$ASSET" "/tmp/$ASSET.sha256" --clobber
