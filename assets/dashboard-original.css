@@ -175,3 +175,56 @@ html:not([data-tf-server-authorized="1"])body{overflow:hidden!important;backgrou
   .tf-mm-secondary-row{align-items:flex-end;}
   .tf-mm-withdraw-pair{flex-wrap:wrap;}
 }
+
+
+/* REV393 — latest-month Drawdown / Consecutive Loss warning states */
+.tf-latest-risk-warning{
+  color:#facc15 !important;
+  font-weight:800 !important;
+}
+.tf-latest-risk-critical{
+  color:#ef4444 !important;
+  font-weight:800 !important;
+}
+.tf-latest-risk-icon{
+  display:inline-grid;
+  place-items:center;
+  width:15px;
+  height:15px;
+  min-width:15px;
+  margin-left:5px;
+  border-radius:50%;
+  vertical-align:-2px;
+  font-family:Arial,sans-serif;
+  font-size:12px;
+  line-height:1;
+  font-weight:900;
+  box-sizing:border-box;
+  user-select:none;
+}
+.tf-latest-risk-icon-warning{
+  background:#facc15;
+  border:1px solid #fde047;
+  color:#111827;
+  box-shadow:0 0 0 1px rgba(250,204,21,.16);
+}
+.tf-latest-risk-icon-critical{
+  background:#ef4444;
+  border:1px solid #f87171;
+  color:#fff;
+  box-shadow:0 0 0 1px rgba(239,68,68,.18);
+}
+.tf-perf-name-text.tf-latest-risk-warning,
+.tf-perf-name-text.tf-latest-risk-critical,
+.tf-holding-analyst.tf-latest-risk-warning,
+.tf-holding-analyst.tf-latest-risk-critical,
+#history-table td.tf-latest-risk-warning,
+#history-table td.tf-latest-risk-critical,
+#drawdown-table td.tf-latest-risk-warning,
+#drawdown-table td.tf-latest-risk-critical,
+.tf-score-analyst.tf-latest-risk-warning,
+.tf-score-analyst.tf-latest-risk-critical,
+.tf-users-analyst-link.tf-latest-risk-warning,
+.tf-users-analyst-link.tf-latest-risk-critical{
+  opacity:1 !important;
+}
