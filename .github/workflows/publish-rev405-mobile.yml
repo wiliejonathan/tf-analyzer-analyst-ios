@@ -33,7 +33,6 @@ jobs:
           OUT=/tmp/TF_Analyzer_Analyst_iOS_BROWSER_REV405_LATEST_MONTH_RISK.zip
           zip -qr "$OUT" . -x '.git/*' '.github/*' 'release-staging/*'
           unzip -tq "$OUT"
-          sha256sum "$OUT" >
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
