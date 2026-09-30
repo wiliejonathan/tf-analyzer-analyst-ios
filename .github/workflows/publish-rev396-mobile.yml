@@ -1,0 +1,116 @@
+name: Publish iOS Browser REV396 analyst colors and Table3 PNL
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'release-staging/REV396-mobile/READY'
+permissions:
+  contents: write
+concurrency:
+  group: publish-mobile-rev396
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate REV396 analyst colors Holding and Table3 PNL
+        run: |
+          set -euo pipefail
+          node --check assets/dashboard-mobile.js
+          node --check mobile-license-gate.js
+          node --check mobile-force-update.js
+          node --check service-worker.js
+          python3 - <<'PY'
+          from pathlib import Path
+          dash=Path('assets/dashboard-mobile.js').read_text()
+          gate=Path('mobile-license-gate.js').read_text()
+          idx=Path('index.html').read_text()
+          sw=Path('service-worker.js').read_text()
+          upd=Path('mobile-force-update.js').read_text()
+          proxy=Path('activation-proxy.html').read_text()
+          css=Path('assets/dashboard-original.css').read_text()
+          assert 'tf_renderHoldingPeriodTables(rowsForCalc);' in dash
+          assert 'REV392 HARD RANGE BOUNDARY' in dash
+          assert 'tfTradeRangeStartMonthIdx = startIdx;' in dash
+          assert 'if (mk !== firstMonthKey)' not in dash
+          assert 'Holding Period must use the exact rows that are CHECKED/enabled in Table 3' in dash
+          assert 'REV393: Latest-month Drawdown / Consecutive Loss warning system' in dash
+          assert 'const drawdown = cumulative < (peak - 1e-9);' in dash
+          assert 'const consecutiveLoss = maxLossStreak >= 2;' in dash
+          assert 'const severity = (drawdown && consecutiveLoss) ? 2' in dash
+          assert 'monthKey === __riskState.monthKey' in dash
+          assert 'tf_applyLatestRiskToElement(analystLink, entry.baseName, null, false);' in dash
+          assert 'function tf_applyLatestRiskPairIconOnly' in dash
+          assert "tf_applyLatestRiskToElement(nameCell, a.baseName || a.name, null, false);" in dash
+          assert "tf_applyLatestRiskToElement(analystCell, row.analyst || '', null, false);" in dash
+          assert "tf_applyLatestRiskPairIconOnly(analystCell, row.analyst || '', row.pair || '', 'left');" in dash
+          assert "tf_applyLatestRiskToElement(n,name.slice(0,sep),null,false);" in dash
+          assert "tf_applyLatestRiskToElement(analystLink, entry.baseName, null, false);" in dash
+          assert "tf_applyLatestRiskToElement(nameSpan, name, null, false);" in dash
+          assert "icon.textContent = st.severity >= 2 ? '×' : (st.severity === 1 ? '!' : '✓');" in dash
+          assert ".tf-latest-risk-icon-healthy" in css
+          assert '.tf-latest-risk-healthy' in css
+          assert '.tf-latest-risk-warning' in css
+          assert '.tf-latest-risk-critical' in css
+          assert "tf_getLatestRiskState(analyst, pair) || tf_getLatestRiskState(analyst, null)" in dash
+          assert "if(days>0)parts.push(pad2(days)+'d');" in dash
+          assert "if(hours>0||days>0)parts.push(pad2(hours)+'h');" in dash
+          assert "parts.push(pad2(minutes)+'m');" in dash
+          assert "tr.classList.add(__pnlPctForRow >= 0 ? 'tf-history-row-pnl-positive' : 'tf-history-row-pnl-negative');" in dash
+          assert 'tf-history-row-pnl-positive' in css
+          assert 'tf-history-row-pnl-negative' in css
+          assert "el.classList.remove('tf-latest-risk-healthy','tf-latest-risk-warning','tf-latest-risk-critical');" in dash
+          assert "el.classList.add(st.severity >= 2 ? 'tf-latest-risk-critical' : (st.severity === 1 ? 'tf-latest-risk-warning' : 'tf-latest-risk-healthy'));" in dash
+          assert "el.title = (base ? base + ' · ' : '') + tf_latestRiskReason(st);" not in dash
+          assert '#facc15' in css and '#ef4444' in css
+          assert "function tf_applyLatestRiskToElement(el, analyst, pair, showIcon, iconPosition)" in dash
+          assert "tf_applyLatestRiskToElement(nameSpan, it.name, null, true, 'left');" in dash
+          assert "tf_applyLatestRiskToElement(nameCell, a.baseName || a.name, null, false);" in dash
+          assert "tf_applyLatestRiskToElement(span, analystName, a.pair || getPrimaryPairForAnalyst(a), true, 'left');" in dash
+          assert "tf_applyLatestRiskToElement(analystCell, row.analyst || '', null, false);" in dash
+          assert "tf_applyLatestRiskToElement(a, name, null, true, 'left');" in dash
+          assert "tf_applyLatestRiskToElement(nameSpan, name, null, false);" in dash
+          assert "width:10px;" in css and "height:10px;" in css
+          assert ".tf-latest-risk-icon-left" in css
+          assert ".tf-risk-name-left" in css
+          assert 'LICENSE_ANDROID_RELAY_URL' in gate
+          assert 'REV392: Android WebView' in gate
+          assert "path: isLicenseFallbackPath(path) ? path : '/mobile/login'" in gate
+          assert 'androidRelayLicenseLookup' in gate
+          assert 'return await directLicenseLookup(body, Math.max(timeoutMs, 25000));' in gate
+          assert 'remoteRevision: \'REV396\'' in gate
+          assert "mobileVersion: '1.17.09'" in gate
+          assert 'TF_LICENSE_RELAY_LOOKUP' in proxy
+          assert "lookup(d.path||'/mobile/login'" in proxy
+          assert "remoteRevision:'REV396'" in proxy
+          assert 'REV396_ANDROID_WEB_RELAY' in proxy
+          assert '?rev=395' in idx
+          assert 'rev396-analyst-colors-table3-pnl' in sw
+          assert "var CURRENT_TAG = 'v1.17.09';" in upd
+          print('REV396 mobile analyst-color/Table3-PNL QA PASS')
+          PY
+      - name: Build bundle
+        run: |
+          set -euo pipefail
+          OUT=/tmp/TF_Analyzer_Analyst_iOS_BROWSER_REV396_ANALYST_COLORS_TABLE3_PNL.zip
+          zip -qr "$OUT" . -x '.git/*' '.github/*' 'release-staging/*'
+          unzip -tq "$OUT"
+          sha256sum "$OUT" > "$OUT.sha256"
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG=v1.17.09
+          OUT=/tmp/TF_Analyzer_Analyst_iOS_BROWSER_REV396_ANALYST_COLORS_TABLE3_PNL.zip
+          NOTES=release-staging/REV396-mobile/RELEASE_NOTES.md
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --target "$GITHUB_SHA" --title 'TF Analyzer Analyst V1.17.09 - REV396 Analyst Colors + Table3 PNL' --notes-file "$NOTES" --latest
+            gh release upload "$TAG" "$OUT" "$OUT.sha256" --clobber
+          else
+            gh release create "$TAG" "$OUT" "$OUT.sha256" --target "$GITHUB_SHA" --title 'TF Analyzer Analyst V1.17.09 - REV396 All Analyst Name Colors' --notes-file "$NOTES" --latest
+          fi
