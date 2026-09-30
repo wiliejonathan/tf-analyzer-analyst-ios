@@ -257,7 +257,7 @@
           deviceType: 'MOBILE',
           clientType: 'MOBILE',
           mobilePlatform: platformName(),
-          mobileVersion: '1.17.20',
+          mobileVersion: '1.17.21',
           remoteRevision: 'REV408',
           requestNonce: String(Date.now()) + '-' + Math.random().toString(36).slice(2)
         })
