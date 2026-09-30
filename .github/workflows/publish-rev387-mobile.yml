@@ -1,0 +1,62 @@
+name: Publish iOS Browser REV387 Holding timeframe parity
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'release-staging/REV387-mobile/READY'
+permissions:
+  contents: write
+concurrency:
+  group: publish-mobile-rev387
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate REV387 source
+        run: |
+          set -euo pipefail
+          node --check assets/dashboard-mobile.js
+          node --check mobile-force-update.js
+          node --check service-worker.js
+          python3 - <<'PY'
+          from pathlib import Path
+          d=Path('assets/dashboard-mobile.js').read_text()
+          idx=Path('index.html').read_text()
+          sw=Path('service-worker.js').read_text()
+          gate=Path('mobile-license-gate.js').read_text()
+          upd=Path('mobile-force-update.js').read_text()
+          assert 'REV387: Max and Avg both use the exact active Table 3 filtered trade rows.' in d
+          assert 'function tf_renderHoldingPeriodTables(filteredRows)' in d
+          assert 'tf_renderHoldingPeriodTables(rowsForUi);' in d
+          assert 'tf_holdingAllTickerRows' not in d
+          assert 'tf_parseHistoryTableDateMs(row.createdDate)' in d and 'tf_parseHistoryTableDateMs(row.displayDate)' in d
+          assert '?rev=387' in idx and '?rev=387' in sw and '?rev=387' in gate
+          assert "var CURRENT_TAG = 'v1.17.00';" in upd
+          print('REV387 mobile QA PASS')
+          PY
+      - name: Build bundle
+        run: |
+          set -euo pipefail
+          source release-staging/REV387-mobile/release.env
+          rm -f "/tmp/$ASSET" "/tmp/$ASSET.sha256"
+          zip -qr "/tmp/$ASSET" . -x '.git/*' '.github/*' 'release-staging/*' 'audit/*'
+          unzip -tq "/tmp/$ASSET"
+          SHA=$(sha256sum "/tmp/$ASSET" | awk '{print $1}')
+          printf '%s  %s\n' "$SHA" "$ASSET" > "/tmp/$ASSET.sha256"
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          source release-staging/REV387-mobile/release.env
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --target "$GITHUB_SHA" --title "$TITLE" --notes-file release-staging/REV387-mobile/RELEASE_NOTES.md
+            gh release upload "$TAG" "/tmp/$ASSET" "/tmp/$ASSET.sha256" --clobber
+          else
+            gh release create "$TAG" "/tmp/$ASSET" "/tmp/$ASSET.sha256" --target "$GITHUB_SHA" --title "$TITLE" --notes-file release-staging/REV387-mobile/RELEASE_NOTES.md --latest
+          fi
