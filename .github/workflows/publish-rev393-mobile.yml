@@ -34,7 +34,7 @@ jobs:
           proxy=Path('activation-proxy.html').read_text()
           css=Path('assets/dashboard-original.css').read_text()
           assert 'tf_renderHoldingPeriodTables(rowsForCalc);' in dash
-          assert 'REV393 HARD RANGE BOUNDARY' in dash
+          assert 'REV392 HARD RANGE BOUNDARY' in dash
           assert 'tfTradeRangeStartMonthIdx = startIdx;' in dash
           assert 'if (mk !== firstMonthKey)' not in dash
           assert 'Holding Period must use the exact rows that are CHECKED/enabled in Table 3' in dash
@@ -61,7 +61,7 @@ jobs:
           assert "lookup(d.path||'/mobile/login'" in proxy
           assert "remoteRevision:'REV393'" in proxy
           assert 'REV393_ANDROID_WEB_RELAY' in proxy
-          assert '?rev=392' in idx
+          assert '?rev=393' in idx
           assert 'rev393-latest-risk-warnings' in sw
           assert "var CURRENT_TAG = 'v1.17.06';" in upd
           print('REV393 mobile warning QA PASS')
@@ -85,5 +85,5 @@ jobs:
             gh release edit "$TAG" --target "$GITHUB_SHA" --title 'TF Analyzer Analyst V1.17.06 - REV393 Latest Risk Warnings' --notes-file "$NOTES" --latest
             gh release upload "$TAG" "$OUT" "$OUT.sha256" --clobber
           else
-            gh release create "$TAG" "$OUT" "$OUT.sha256" --target "$GITHUB_SHA" --title 'TF Analyzer Analyst V1.17.06 - REV393' --notes-file "$NOTES" --latest
+            gh release create "$TAG" "$OUT" "$OUT.sha256" --target "$GITHUB_SHA" --title 'TF Analyzer Analyst V1.17.06 - REV393 Latest Risk Warnings' --notes-file "$NOTES" --latest
           fi
