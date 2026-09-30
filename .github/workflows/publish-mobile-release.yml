@@ -19,6 +19,7 @@ on:
       - '!release-staging/REV395-mobile/**'
       - '!release-staging/REV396-mobile/**'
       - '!release-staging/REV397-mobile/**'
+      - '!release-staging/REV398-mobile/**'
 
 permissions:
   contents: write
