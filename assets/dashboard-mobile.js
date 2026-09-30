@@ -4549,7 +4549,7 @@ return 'HEALTHY' + month + ': No Drawdown / Consecutive Loss';
 function tf_applyLatestRiskToElement(el, analyst, pair, showIcon, iconPosition) {
 try {
 if (!el) return null;
-const st = tf_getLatestRiskState(analyst, pair);
+const st = tf_getLatestRiskState(analyst, pair) || (pair ? tf_getLatestRiskState(analyst, null) : null);
 el.classList.remove('tf-latest-risk-healthy','tf-latest-risk-warning','tf-latest-risk-critical');
 el.querySelectorAll && el.querySelectorAll('[data-tf-latest-risk-icon="1"]').forEach((x) => x.remove());
 if (!st) return null;
@@ -4618,7 +4618,6 @@ return allowedPairs.map(String).map((p) => p.toUpperCase()).includes(pairUpper);
 : ANALYSTS.filter((a) => tf_isAnalystGloballySelected(a.baseName || a.name));
 const priceBusy = tf_isMyfxbookPriceLoading();
 try { tf_refreshLatestRiskState(true); } catch (e) { }
-const tf_table1WarnedAnalysts = new Set();
 filteredAnalysts.forEach((a) => {
 if (selectedAnalystPairsMapStats && typeof selectedAnalystPairsMapStats === 'object') {
 const baseName = a.baseName || a.name;
@@ -4658,10 +4657,7 @@ const tr = document.createElement('tr');
 const nameCell = document.createElement('td');
 nameCell.textContent = a.baseName || a.name;
 nameCell.classList.add('monthly-sticky-col-2','tf-risk-name-left');
-if (!tf_table1WarnedAnalysts.has(tf_latestRiskNormAnalyst(baseName))) {
-  tf_applyLatestRiskToElement(nameCell, baseName, null, true, 'left');
-  tf_table1WarnedAnalysts.add(tf_latestRiskNormAnalyst(baseName));
-}
+tf_applyLatestRiskToElement(nameCell, baseName, rowPair, true, 'left');
 tr.appendChild(nameCell);
 const pairCell = document.createElement('td');
 pairCell.textContent = rowPair ? String(rowPair).toUpperCase() : '-';
@@ -5758,7 +5754,7 @@ actionCell.appendChild(btn);
 tr.appendChild(actionCell);
 const nameCell = document.createElement('td');
 nameCell.textContent = formatAnalystDisplayName(a.baseName || a.name);
-nameCell.title = String(a.baseName || a.name || '').trim();
+nameCell.removeAttribute('title');
 nameCell.classList.add('monthly-sticky-col-2');
 tf_applyLatestRiskToElement(nameCell, a.baseName || a.name, null, false);
 tr.appendChild(nameCell);
@@ -6601,8 +6597,7 @@ const analystCell = tf_markHistoryCell(document.createElement('td'), 'analyst');
 analystCell.classList.add('tf-risk-name-left');
 analystCell.textContent = isWithdrawRow ? 'Withdraw' : formatAnalystDisplayName(row.analyst || '');
 analystCell.title = isWithdrawRow ? 'Withdraw' : String(row.analyst || '').trim();
-if (!isWithdrawRow) tf_applyLatestRiskToElement(analystCell, row.analyst || '', null, false);
-tf_applyLatestRiskPairIconOnly(analystCell, row.analyst || '', row.pair || '', 'left');
+if (!isWithdrawRow) tf_applyLatestRiskToElement(analystCell, row.analyst || '', row.pair || '', true, 'left');
 tr.appendChild(analystCell);
 const balanceCompoundCell = tf_markHistoryCell(document.createElement('td'), 'balance');
 balanceCompoundCell.classList.add('text-right', 'mono');
@@ -6746,6 +6741,8 @@ else {
 balanceCell.textContent = Number.isFinite(row.balancePnl) ? formatMoney(row.balancePnl) : formatMoney(startingBalance || 0);
 }
 tr.appendChild(balanceCell);
+// REV396 final visual parity: all multi-pair analyst rows get icons; analyst text
+// always matches the icon state; Holding hours are fixed-width 2 digits.
 // REV396: every trade row text follows PNL % sign, except Nama Analis which
 // follows analyst risk status (green / yellow / red).
 if (!isWithdrawRow) {
@@ -6792,13 +6789,13 @@ function tf_formatHoldingDuration(ms) {
 const raw=Number(ms);
 if(!Number.isFinite(raw)||raw<0)return '—';
 let totalMinutes=Math.round(raw/60000);
-if(totalMinutes<=0)return '00m';
+if(totalMinutes<0)totalMinutes=0;
 const days=Math.floor(totalMinutes/1440); totalMinutes-=days*1440;
 const hours=Math.floor(totalMinutes/60); const minutes=totalMinutes-hours*60;
 const pad2=(v)=>String(Math.max(0,Math.floor(Number(v)||0))).padStart(2,'0');
 const parts=[];
 if(days>0)parts.push(pad2(days)+'d');
-if(hours>0||days>0)parts.push(pad2(hours)+'h');
+parts.push(pad2(hours)+'h');
 parts.push(pad2(minutes)+'m');
 return parts.join(' ');
 }
@@ -6819,7 +6816,7 @@ let a=avgAgg.get(k); if(!a){a={sum:0,count:0};avgAgg.set(k,a);} a.sum+=ms;a.coun
 function renderSide(tbody,subset){
 tbody.innerHTML='';
 if(!subset.length){const tr=document.createElement('tr');tr.className='tf-holding-empty-row';const td=document.createElement('td');td.colSpan=3;td.textContent=names.length?'—':'Belum ada trade yang tampil di Table 3 untuk filter aktif.';tr.appendChild(td);tbody.appendChild(tr);return;}
-subset.forEach(name=>{const tr=document.createElement('tr');const n=document.createElement('td');n.className='tf-holding-analyst';n.textContent=name;try{const sep=name.lastIndexOf(' - ');if(sep>0)tf_applyLatestRiskToElement(n,name.slice(0,sep),null,false);tf_applyLatestRiskPairIconOnly(n,name.slice(0,sep),name.slice(sep+3),'left');}catch(e){}const m=document.createElement('td');m.className='mono tf-holding-value';m.textContent=tf_formatHoldingDuration(maxBy.get(name));const a=document.createElement('td');a.className='mono tf-holding-value';const g=avgAgg.get(name);a.textContent=g&&g.count?tf_formatHoldingDuration(g.sum/g.count):'—';tr.append(n,m,a);tbody.appendChild(tr);});
+subset.forEach(name=>{const tr=document.createElement('tr');const n=document.createElement('td');n.className='tf-holding-analyst';n.textContent=name;try{const sep=name.lastIndexOf(' - ');if(sep>0)tf_applyLatestRiskToElement(n,name.slice(0,sep),name.slice(sep+3),true,'left');}catch(e){}const m=document.createElement('td');m.className='mono tf-holding-value';m.textContent=tf_formatHoldingDuration(maxBy.get(name));const a=document.createElement('td');a.className='mono tf-holding-value';const g=avgAgg.get(name);a.textContent=g&&g.count?tf_formatHoldingDuration(g.sum/g.count):'—';tr.append(n,m,a);tbody.appendChild(tr);});
 }
 const splitAt=Math.ceil(names.length/2);renderSide(leftBody,names.slice(0,splitAt));renderSide(rightBody,names.slice(splitAt));
 }
