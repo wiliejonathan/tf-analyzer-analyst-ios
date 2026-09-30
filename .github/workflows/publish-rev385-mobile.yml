@@ -1,0 +1,72 @@
+name: Publish iOS Browser REV385 Holding Table3 source fix
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'release-staging/REV385-mobile/READY'
+permissions:
+  contents: write
+concurrency:
+  group: publish-mobile-rev385
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Patch mobile source
+        run: |
+          set -euo pipefail
+          python3 tools/build_rev385_mobile.py .
+          node --check assets/dashboard-mobile.js
+          node --check mobile-force-update.js
+          node --check mobile-license-gate.js
+          node --check service-worker.js
+          python3 - <<'PY'
+          from pathlib import Path
+          main=Path('assets/dashboard-mobile.js').read_text()
+          assert 'tf_parseHistoryTableDateMs' in main
+          assert 'tf_renderHoldingPeriodTables(rowsForUi)' in main
+          assert 'tf_holdingAllTickerRows' not in main
+          assert 'row.createdDate' in main and 'row.displayDate' in main
+          assert '?rev=385' in Path('index.html').read_text()
+          assert '?rev=385' in Path('service-worker.js').read_text()
+          assert '?rev=385' in Path('mobile-license-gate.js').read_text()
+          assert "var CURRENT_TAG = 'v1.16.98';" in Path('mobile-force-update.js').read_text()
+          print('REV385 mobile source validation PASS')
+          PY
+      - name: Commit website source
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/dashboard-mobile.js index.html service-worker.js mobile-license-gate.js mobile-force-update.js README_REV385.md
+          git commit -m "REV385 Holding uses final Table 3 rows" || true
+          git push origin HEAD:main
+          echo "NEW_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+      - name: Package iOS browser
+        run: |
+          set -euo pipefail
+          OUT=/tmp/TF_Analyzer_Analyst_iOS_BROWSER_REV385_HOLDING_TABLE3_SOURCE_FIX.zip
+          zip -qr "$OUT" . -x '.git/*' '.github/*' 'release-staging/*' 'audit/*' 'tools/*'
+          unzip -tq "$OUT"
+          SHA=$(sha256sum "$OUT"|awk '{print $1}')
+          printf '%s  %s\n' "$SHA" 'TF_Analyzer_Analyst_iOS_BROWSER_REV385_HOLDING_TABLE3_SOURCE_FIX.zip' > "$OUT.sha256"
+          echo "MOBILE_SHA=$SHA" >> "$GITHUB_ENV"
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG=v1.16.98
+          OUT=/tmp/TF_Analyzer_Analyst_iOS_BROWSER_REV385_HOLDING_TABLE3_SOURCE_FIX.zip
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --target "$NEW_SHA" --title 'TF Analyzer Analyst iOS Browser v1.16.98 — REV385' --notes-file release-staging/REV385-mobile/RELEASE_NOTES.md --latest
+            gh release upload "$TAG" "$OUT" "$OUT.sha256" --clobber
+          else
+            gh release create "$TAG" "$OUT" "$OUT.sha256" --target "$NEW_SHA" --title 'TF Analyzer Analyst iOS Browser v1.16.98 — REV385' --notes-file release-staging/REV385-mobile/RELEASE_NOTES.md --latest
+          fi
+          echo "REV385 mobile published SHA256=$MOBILE_SHA"
