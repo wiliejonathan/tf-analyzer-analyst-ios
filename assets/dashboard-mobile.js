@@ -4592,9 +4592,25 @@ span.className='tf-analyst-name-color-target';
 span.textContent=String(text || '');
 return span;
 }
+function tf_ensureAnalystNameColorTarget(el) {
+try {
+if (!el || !el.querySelector) return null;
+let target=el.querySelector('.tf-analyst-name-color-target');
+if (target) return target;
+const nodes=Array.from(el.childNodes || []);
+const textNodes=nodes.filter((n)=>n && n.nodeType===3 && String(n.nodeValue || '').trim());
+if (!textNodes.length) return null;
+target=tf_createAnalystNameColorTarget(textNodes.map((n)=>String(n.nodeValue || '')).join(''));
+const first=textNodes[0];
+el.insertBefore(target, first);
+textNodes.forEach((n)=>{ try { n.remove(); } catch (e) { if (n.parentNode) n.parentNode.removeChild(n); } });
+return target;
+} catch (e) { return null; }
+}
 function tf_forceLatestRiskTextColor(el, st) {
 try {
 if (!el || !st) return;
+try { tf_ensureAnalystNameColorTarget(el); } catch (e) { }
 const color = st.severity >= 2 ? '#ef4444' : (st.severity === 1 ? '#facc15' : '#22c55e');
 el.style && el.style.setProperty('color', color, 'important');
 if (el.querySelectorAll) {
