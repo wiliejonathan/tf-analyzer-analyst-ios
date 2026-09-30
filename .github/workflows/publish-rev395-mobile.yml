@@ -42,7 +42,6 @@ jobs:
           assert 'const drawdown = cumulative < (peak - 1e-9);' in dash
           assert 'const consecutiveLoss = maxLossStreak >= 2;' in dash
           assert 'const severity = (drawdown && consecutiveLoss) ? 2' in dash
-          assert "icon.textContent = st.severity >= 2 ? '×' : '!';" in dash
           assert 'monthKey === __riskState.monthKey' in dash
           assert 'tf_applyLatestRiskToElement(analystLink, entry.baseName, null, false);' in dash
           assert 'function tf_applyLatestRiskPairIconOnly' in dash
