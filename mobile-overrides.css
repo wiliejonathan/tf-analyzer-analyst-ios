@@ -9222,15 +9222,25 @@ html,body.tf-mobile-app,#tf-dashboard-main.page,.tf-mobile-screen{
 /* REV406 mobile body alignment takes precedence over sticky rail rules. */
 #tf-dashboard-main #section-summary #summary-table tbody td.monthly-sticky-col-2,#tf-dashboard-main #section-summary #summary-table tbody td:first-child,#tf-dashboard-main #section-monthly #monthly-table tbody td.monthly-sticky-col-2,#tf-dashboard-main #section-history #history-table tbody td[data-history-col="analyst"],#tf-dashboard-main #section-history #drawdown-table tbody tr:not(.dd-child-row)>td:nth-child(2){text-align:left!important;justify-content:flex-start!important;}
 
-/* REV407 risk explanation on dashboard entry */
+/* REV407: Pulse Reactor card with Halo-style cyan/blue/violet title. */
 body.tf-risk-explainer-open{overflow:hidden!important;}
-#tf-risk-explainer{position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;background:rgba(2,6,23,.93);padding:18px;overflow:auto;}
-#tf-risk-explainer .tf-risk-explainer-card{width:100%;max-width:470px;max-height:calc(100dvh - 36px);overflow:auto;padding:22px;border:1px solid #334155;border-radius:18px;background:#0f172a;color:#e2e8f0;box-sizing:border-box;}
-#tf-risk-explainer h2{font-size:18px;line-height:1.3;margin:0 0 10px;}
-#tf-risk-explainer p{font-size:12px;line-height:1.5;color:#94a3b8;margin:0 0 14px;}
-#tf-risk-explainer .tf-risk-explainer-row{display:flex;flex-direction:column;gap:5px;margin:12px 0;font-size:12px;line-height:1.5;}
-#tf-risk-explainer .tf-risk-explainer-row strong{font-size:15px;}
-#tf-risk-explainer button{width:100%;min-height:44px;margin-top:14px;border:0;border-radius:12px;background:#38bdf8;color:#082f49;font-size:14px;font-weight:700;cursor:pointer;}
+#tf-risk-explainer{position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;background:rgba(4,10,17,.96);padding:18px;overflow:auto;}
+#tf-risk-explainer .tf-risk-explainer-card{width:100%;max-width:440px;max-height:calc(100dvh - 36px);overflow:auto;padding:28px;border:1px solid rgba(56,189,248,.18);border-radius:18px;background:radial-gradient(ellipse at 20% 25%,rgba(22,77,111,.18),transparent 75%),#090f18;color:#dbeafe;box-sizing:border-box;box-shadow:0 20px 80px rgba(0,0,0,.24);}
+#tf-risk-explainer .tf-risk-explainer-eyebrow{color:#38d1ff;font:10px ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:2.4px;margin-bottom:24px;}
+#tf-risk-explainer h2{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:36px!important;font-weight:800!important;line-height:1!important;letter-spacing:-1px;margin:0 0 22px!important;background:linear-gradient(100deg,#00e5ef 0%,#38a9ff 42%,#9665ff 85%);background-clip:text;-webkit-background-clip:text;color:transparent!important;-webkit-text-fill-color:transparent;}
+#tf-risk-explainer p{font:11px/1.7 ui-monospace,SFMono-Regular,Consolas,monospace;color:#94a3b8;margin:0 0 22px;}
+#tf-risk-explainer .tf-risk-explainer-row{display:flex;align-items:flex-start;gap:12px;margin:16px 0;}
+#tf-risk-explainer .tf-risk-explainer-row>div{flex:1;min-width:0;}
+#tf-risk-explainer .tf-risk-explainer-row strong{display:block;font-size:12px;line-height:1.4;margin:0 0 5px;}
+#tf-risk-explainer .tf-risk-explainer-row span:not(.tf-risk-explainer-icon){display:block;font-size:11px;line-height:1.6;color:#a9bdd0;}
+#tf-risk-explainer .tf-risk-explainer-icon{display:flex;align-items:center;justify-content:center;width:24px;height:24px;flex:0 0 24px;border:1px solid currentColor;border-radius:50%;font:700 14px/1 system-ui;margin-top:1px;}
+#tf-risk-explainer .tf-risk-green{color:#22c55e;}
+#tf-risk-explainer .tf-risk-yellow{color:#facc15;}
+#tf-risk-explainer .tf-risk-red{color:#ef4444;}
+#tf-risk-explainer button{width:100%;min-height:44px;margin-top:14px;border:1px solid rgba(56,189,248,.5);border-radius:7px;background:rgba(56,189,248,.08);color:#55d6ff;font-size:12px;font-weight:600;letter-spacing:.6px;cursor:pointer;}
+#tf-risk-explainer button:hover,#tf-risk-explainer button:focus-visible{background:rgba(56,189,248,.17);outline:2px solid rgba(56,189,248,.2);outline-offset:3px;}
+#tf-risk-explainer .tf-risk-explainer-footer{display:flex;justify-content:space-between;gap:12px;margin-top:22px;padding-top:14px;border-top:1px solid #1b2533;color:#64748b;font:8px/1.4 ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:1px;}
+@media(max-width:380px){#tf-risk-explainer .tf-risk-explainer-card{padding:22px;}#tf-risk-explainer h2{font-size:32px!important;}}
 
 #tf-table1-analytics-filter{display:flex!important;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 14px!important;}
 #tf-table1-analytics-filter .tf-time-range-row{width:100%;}
