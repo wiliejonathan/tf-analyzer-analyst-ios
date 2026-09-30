@@ -6534,60 +6534,67 @@ return tr;
 }
 
 
+function tf_parseHistoryTableDateMs(value) {
+try {
+if (value === null || value === undefined) return null;
+if (typeof value === 'number' && Number.isFinite(value) && value > 0) return value;
+const raw=String(value||'').trim();
+if(!raw)return null;
+const wib=raw.replace(/\s*WIB\s*$/i,'').trim();
+const m=wib.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+if(m){
+const day=Number(m[1]),month=Number(m[2]),year=Number(m[3]),hour=Number(m[4]),minute=Number(m[5]),second=Number(m[6]||0);
+if(month>=1&&month<=12&&day>=1&&day<=31&&hour>=0&&hour<=23&&minute>=0&&minute<=59&&second>=0&&second<=59){
+const utcMs=Date.UTC(year,month-1,day,hour-7,minute,second,0);
+if(Number.isFinite(utcMs))return utcMs;
+}
+}
+const parsed=Date.parse(raw);
+return Number.isFinite(parsed)?parsed:null;
+}catch(e){return null;}
+}
 function tf_getHoldingDurationMs(row) {
 try {
-if (!row || row.isWithdraw) return null;
-const created = Number(row.createdSortKey);
-const closed = Number(row.sortKey);
-if (!Number.isFinite(created) || !Number.isFinite(closed) || created <= 0 || closed <= 0) return null;
-const diff = closed - created;
-return Number.isFinite(diff) && diff >= 0 ? diff : null;
-} catch (e) { return null; }
+if(!row||row.isWithdraw)return null;
+let created=tf_parseHistoryTableDateMs(row.createdDate);
+let closed=tf_parseHistoryTableDateMs(row.displayDate);
+if(!Number.isFinite(created)||created<=0)created=Number(row.createdSortKey);
+if(!Number.isFinite(closed)||closed<=0)closed=Number(row.sortKey);
+if(!Number.isFinite(created)||!Number.isFinite(closed)||created<=0||closed<=0)return null;
+const diff=closed-created;
+return Number.isFinite(diff)&&diff>=0?diff:null;
+}catch(e){return null;}
 }
 function tf_formatHoldingDuration(ms) {
-const raw = Number(ms);
-if (!Number.isFinite(raw) || raw < 0) return '—';
-let totalMinutes = Math.round(raw / 60000);
-if (totalMinutes <= 0) return '0m';
-const days = Math.floor(totalMinutes / 1440);
-totalMinutes -= days * 1440;
-const hours = Math.floor(totalMinutes / 60);
-const minutes = totalMinutes - (hours * 60);
-const parts = [];
-if (days > 0) parts.push(days + 'd');
-if (hours > 0 || days > 0) parts.push(hours + 'h');
-parts.push(minutes + 'm');
+const raw=Number(ms);
+if(!Number.isFinite(raw)||raw<0)return '—';
+let totalMinutes=Math.round(raw/60000);
+if(totalMinutes<=0)return '0m';
+const days=Math.floor(totalMinutes/1440); totalMinutes-=days*1440;
+const hours=Math.floor(totalMinutes/60); const minutes=totalMinutes-hours*60;
+const parts=[]; if(days>0)parts.push(days+'d'); if(hours>0||days>0)parts.push(hours+'h'); parts.push(minutes+'m');
 return parts.join(' ');
 }
-function tf_renderHoldingPeriodTables(allTickerRows, filteredRows) {
-const leftBody = document.getElementById('tf-holding-body-left');
-const rightBody = document.getElementById('tf-holding-body-right');
-if (!leftBody || !rightBody) return;
-const allRows = Array.isArray(allTickerRows) ? allTickerRows.filter((r) => r && !r.isWithdraw) : [];
-const avgRows = Array.isArray(filteredRows) ? filteredRows.filter((r) => r && !r.isWithdraw) : [];
-function keyOf(row) {
-const analyst = String(row && row.analyst || '').trim();
-const pair = String(row && row.pair || '').trim().toUpperCase();
-return analyst && pair ? analyst + ' - ' + pair : '';
-}
-const names = Array.from(new Set(allRows.map(keyOf).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'id',{sensitivity:'base'}));
-const maxBy = new Map(), avgAgg = new Map();
-for (const row of allRows) {
-const k=keyOf(row), ms=tf_getHoldingDurationMs(row); if(!k || ms===null) continue;
-const prev=maxBy.get(k); if(!Number.isFinite(prev)||ms>prev) maxBy.set(k,ms);
-}
-for (const row of avgRows) {
-const k=keyOf(row), ms=tf_getHoldingDurationMs(row); if(!k || ms===null) continue;
-let a=avgAgg.get(k); if(!a){a={sum:0,count:0};avgAgg.set(k,a);} a.sum+=ms; a.count++;
+function tf_renderHoldingPeriodTables(tableRows) {
+const leftBody=document.getElementById('tf-holding-body-left');
+const rightBody=document.getElementById('tf-holding-body-right');
+if(!leftBody||!rightBody)return;
+const rows=Array.isArray(tableRows)?tableRows.filter(r=>r&&!r.isWithdraw):[];
+function keyOf(row){const analyst=String(row&&row.analyst||'').trim();const pair=String(row&&row.pair||'').trim().toUpperCase();return analyst&&pair?analyst+' - '+pair:'';}
+const names=Array.from(new Set(rows.map(keyOf).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'id',{sensitivity:'base'}));
+const maxBy=new Map(),avgAgg=new Map();
+for(const row of rows){
+const k=keyOf(row),ms=tf_getHoldingDurationMs(row); if(!k||ms===null)continue;
+const prev=maxBy.get(k); if(!Number.isFinite(prev)||ms>prev)maxBy.set(k,ms);
+let a=avgAgg.get(k); if(!a){a={sum:0,count:0};avgAgg.set(k,a);} a.sum+=ms;a.count++;
 }
 function renderSide(tbody,subset){
 tbody.innerHTML='';
-if(!subset.length){const tr=document.createElement('tr');tr.className='tf-holding-empty-row';const td=document.createElement('td');td.colSpan=3;td.textContent=names.length?'—':'Belum ada data trade untuk ticker yang aktif.';tr.appendChild(td);tbody.appendChild(tr);return;}
-subset.forEach((name)=>{const tr=document.createElement('tr');const n=document.createElement('td');n.className='tf-holding-analyst';n.textContent=name;const m=document.createElement('td');m.className='mono tf-holding-value';m.textContent=tf_formatHoldingDuration(maxBy.get(name));const a=document.createElement('td');a.className='mono tf-holding-value';const g=avgAgg.get(name);a.textContent=g&&g.count?tf_formatHoldingDuration(g.sum/g.count):'—';tr.append(n,m,a);tbody.appendChild(tr);});
+if(!subset.length){const tr=document.createElement('tr');tr.className='tf-holding-empty-row';const td=document.createElement('td');td.colSpan=3;td.textContent=names.length?'—':'Belum ada trade yang tampil di Table 3 untuk filter aktif.';tr.appendChild(td);tbody.appendChild(tr);return;}
+subset.forEach(name=>{const tr=document.createElement('tr');const n=document.createElement('td');n.className='tf-holding-analyst';n.textContent=name;const m=document.createElement('td');m.className='mono tf-holding-value';m.textContent=tf_formatHoldingDuration(maxBy.get(name));const a=document.createElement('td');a.className='mono tf-holding-value';const g=avgAgg.get(name);a.textContent=g&&g.count?tf_formatHoldingDuration(g.sum/g.count):'—';tr.append(n,m,a);tbody.appendChild(tr);});
 }
-const splitAt=Math.ceil(names.length/2); renderSide(leftBody,names.slice(0,splitAt)); renderSide(rightBody,names.slice(splitAt));
+const splitAt=Math.ceil(names.length/2);renderSide(leftBody,names.slice(0,splitAt));renderSide(rightBody,names.slice(splitAt));
 }
-
 function recomputeHistoryRows() {
 const selectedAnalysts = null;
 const fixedLotCache = new Map();
@@ -6715,14 +6722,8 @@ tf_refreshSingleMonthSelectors();
 tf_syncSingleMonthSelectorsUI();
 }
 catch (e) { }
-const tf_holdingAllTickerRows = baseRows.slice();
 try {
 baseRows = tf_filterRowsByTradeTimeRange(baseRows, maxMonthIdx);
-}
-catch (e) { }
-try {
-const tf_holdingFilteredRows = tf_filterRowsByUnifiedDate(baseRows);
-tf_renderHoldingPeriodTables(tf_holdingAllTickerRows, tf_holdingFilteredRows);
 }
 catch (e) { }
 const tf_closedKeyOf = (row) => {
@@ -7060,6 +7061,10 @@ r.balanceCompound = startingBalance;
 catch (e) { }
 const priceBusy = tf_isMyfxbookPriceLoading();
 const rowsForUi = tf_getHistoryRowsForUiAndExport(rowsForDisplay);
+try {
+tf_renderHoldingPeriodTables(rowsForUi);
+}
+catch (e) { }
 try {
 tf_lastVisibleHistoryRowIds = Array.isArray(rowsForUi) ? rowsForUi.map(r => tf_historyRowId(r)).filter(Boolean) : [];
 tf_lastEligibleHistoryRowIds = Array.isArray(rowsForUi)

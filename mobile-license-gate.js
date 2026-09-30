@@ -6,11 +6,11 @@
   // Keep the REV351 key so users who already activated on v1.16.67 migrate automatically.
   const AUTH_KEY = 'tfMobileRememberedLicenseV351';
   const APP_SCRIPTS = [
-    'mobile-chrome-shim.js?rev=384',
-    'assets/dashboard-mobile.js?rev=384',
-    'mobile-data-bridge.js?rev=384',
-    'mobile-app-shell.js?rev=384',
-    'mobile-remote.js?rev=384'
+    'mobile-chrome-shim.js?rev=385',
+    'assets/dashboard-mobile.js?rev=385',
+    'mobile-data-bridge.js?rev=385',
+    'mobile-app-shell.js?rev=385',
+    'mobile-remote.js?rev=385'
   ];
 
   let appStarted = false;
