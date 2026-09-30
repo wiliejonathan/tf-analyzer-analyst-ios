@@ -409,6 +409,25 @@ function tfMobilePayloadStorageV399(payload){
   if(!payload||typeof payload!=="object")return {};
   return payload.storage&&typeof payload.storage==="object"&&!Array.isArray(payload.storage)?payload.storage:payload;
 }
+function tfMobileRecoverRememberedLinksV401(storage){
+  const st=storage&&typeof storage==="object"&&!Array.isArray(storage)?storage:null;
+  if(!st)return storage;
+  const sources=st.tfAnalystSources&&typeof st.tfAnalystSources==="object"&&!Array.isArray(st.tfAnalystSources)?st.tfAnalystSources:null;
+  const remembered=Array.isArray(st.tfRememberedAnalystLinks)?st.tfRememberedAnalystLinks:[];
+  if(remembered.length===0&&sources&&Object.keys(sources).length){
+    st.tfRememberedAnalystLinks=Object.keys(sources).sort().map(name=>{
+      const src=sources[name]||{};
+      const url=String(src.url||src.link||"").trim();
+      if(!url)return null;
+      const pairs=Array.isArray(src.pairs)&&src.pairs.length?src.pairs.slice():["__ALL__"];
+      return {name:String(name||"").trim(),url,pairs};
+    }).filter(Boolean);
+  }
+  if(Array.isArray(st.tfRememberedAnalystLinks)&&st.tfRememberedAnalystLinks.length){
+    st.tfRememberLinksEnabled=true;
+  }
+  return st;
+}
 function storageGet(keys){return new Promise(r=>chrome.storage.local.get(keys,x=>r(x||{})));}
 function storageSet(o){
   return new Promise((resolve,reject)=>{
@@ -598,6 +617,9 @@ function tfMobileNormalizeStorageV31(input,opts){
           ? st.tfAnalystSources
           : st.analystSources
       );
+  // REV401: official/legacy exports may contain [] here even while tfAnalystSources is complete.
+  // Rebuild remembered sidebar links before storage is written so closing/reopening keeps all analysts.
+  tfMobileRecoverRememberedLinksV401(st);
 
   st.tfMonthlyStats=(st.tfMonthlyStats&&typeof st.tfMonthlyStats==='object'&&!Array.isArray(st.tfMonthlyStats))
     ? st.tfMonthlyStats
