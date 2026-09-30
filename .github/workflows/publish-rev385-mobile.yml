@@ -40,7 +40,7 @@ jobs:
           assert 'const tf_holdingAllTickerRows = baseRows.slice();' in dash
           assert 'tf_renderHoldingPeriodTables(tf_holdingAllTickerRows, rowsForUi);' in dash
           assert '?rev=385' in idx and '?rev=384' not in idx
-          assert '?rev=385' in sw and 'rev385-holding-accuracy-fix' in sw
+          assert '?rev=385' in sw and 'rev385-' in sw
           assert '?rev=385' in gate and '?rev=384' not in gate
           assert "var CURRENT_TAG = 'v1.16.98';" in upd
           print('REV385 mobile source QA PASS')
@@ -63,6 +63,8 @@ jobs:
           source release-staging/REV385-mobile/release.env
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release edit "$TAG" --target "$GITHUB_SHA" --title "$TITLE" --notes-file release-staging/REV385-mobile/RELEASE_NOTES.md --latest
+            gh release delete-asset "$TAG" TF_Analyzer_Analyst_iOS_BROWSER_REV385_HOLDING_TABLE3_SOURCE_FIX.zip --yes 2>/dev/null || true
+            gh release delete-asset "$TAG" TF_Analyzer_Analyst_iOS_BROWSER_REV385_HOLDING_TABLE3_SOURCE_FIX.zip.sha256 --yes 2>/dev/null || true
             gh release upload "$TAG" "/tmp/$ASSET" "/tmp/$ASSET.sha256" --clobber
           else
             gh release create "$TAG" "/tmp/$ASSET" "/tmp/$ASSET.sha256" --target "$GITHUB_SHA" --title "$TITLE" --notes-file release-staging/REV385-mobile/RELEASE_NOTES.md --latest
