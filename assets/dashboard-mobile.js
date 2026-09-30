@@ -7064,10 +7064,6 @@ catch (e) { }
 const priceBusy = tf_isMyfxbookPriceLoading();
 const rowsForUi = tf_getHistoryRowsForUiAndExport(rowsForDisplay);
 try {
-tf_renderHoldingPeriodTables(rowsForUi);
-}
-catch (e) { }
-try {
 tf_lastVisibleHistoryRowIds = Array.isArray(rowsForUi) ? rowsForUi.map(r => tf_historyRowId(r)).filter(Boolean) : [];
 tf_lastEligibleHistoryRowIds = Array.isArray(rowsForUi)
 ? rowsForUi.filter(r => tf_isHistoryRowEligibleForAllToggle(r)).map(r => tf_historyRowId(r)).filter(Boolean)
@@ -7082,6 +7078,12 @@ tf_recomputeBalancesSkippingDisabled(rowsForUi, startingBalance, riskMode);
 }
 catch (e) { }
 const rowsForCalc = Array.isArray(rowsForUi) ? rowsForUi.filter(r => tf_isHistoryRowEnabled(r)) : [];
+// REV391: Holding Period must use the exact rows that are CHECKED/enabled in Table 3.
+// This also excludes carry-over trades auto-unticked by Time Range / Time Range per Month.
+try {
+tf_renderHoldingPeriodTables(rowsForCalc);
+}
+catch (e) { }
 try {
 lastHistoryRowsForExport = rowsForCalc.slice();
 }
