@@ -21,6 +21,7 @@ on:
       - '!release-staging/REV397-mobile/**'
       - '!release-staging/REV398-mobile/**'
       - '!release-staging/REV399-mobile/**'
+      - '!release-staging/REV400-mobile/**'
 
 permissions:
   contents: write
