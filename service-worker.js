@@ -1,23 +1,23 @@
-const CACHE='tf-analyzer-analyst-mobile-rev391-holding-checkbox-android-relay';
+const CACHE='tf-analyzer-analyst-mobile-rev392-holding-range-android-activation';
 const ASSETS=[
-  './assets/dashboard-mobile.js?rev=391',
-  './assets/dashboard-original.css?rev=391',
+  './assets/dashboard-mobile.js?rev=392',
+  './assets/dashboard-original.css?rev=392',
   './icon32.png',
   './icons/icon-180.png',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './index.html',
   './manifest.webmanifest',
-  './mobile-app-shell.js?rev=391',
-  './mobile-remote.js?rev=391',
-  './mobile-chrome-shim.js?rev=391',
-  './mobile-data-bridge.js?rev=391',
-  './mobile-force-update.js?rev=391',
-  './mobile-license-gate.js?rev=391',
-  './activation-proxy.html?rev=391',
-  './mobile-remote-dashboard-home-hotfix.js?rev=391',
-  './mobile-import-fix-v30.js?rev=391',
-  './mobile-overrides.css?rev=391'
+  './mobile-app-shell.js?rev=392',
+  './mobile-remote.js?rev=392',
+  './mobile-chrome-shim.js?rev=392',
+  './mobile-data-bridge.js?rev=392',
+  './mobile-force-update.js?rev=392',
+  './mobile-license-gate.js?rev=392',
+  './activation-proxy.html?rev=392',
+  './mobile-remote-dashboard-home-hotfix.js?rev=392',
+  './mobile-import-fix-v30.js?rev=392',
+  './mobile-overrides.css?rev=392'
 ];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
