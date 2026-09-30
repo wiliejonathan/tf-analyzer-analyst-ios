@@ -4,18 +4,23 @@
   const API_BASE = 'https://tf-license-device-api.wiliejonathan1999.workers.dev';
   const LICENSE_ENDPOINT_POINTER_URL = 'https://raw.githubusercontent.com/wiliejonathan/tf-analyzer-admin/main/license-endpoint.json';
   const LICENSE_DIRECT_FALLBACK_URL = 'https://script.google.com/macros/s/AKfycbzUbx40vGvuCS4hQEOdfs-DeSU_TY-9zWXXPZzOKn3D9h0m5pQQYD6GGNCefufvsrv2eA/exec';
-  const LICENSE_ANDROID_RELAY_URL = 'https://wiliejonathan.github.io/tf-analyzer-analyst-ios/activation-proxy.html?rev=403';
+  const LICENSE_ANDROID_RELAY_URL = 'https://wiliejonathan.github.io/tf-analyzer-analyst-ios/activation-proxy.html?rev=404';
   const LICENSE_WATCH_MS = 60000;
   // Keep the REV351 key so users who already activated on v1.16.67 migrate automatically.
   const AUTH_KEY = 'tfMobileRememberedLicenseV351';
   const APP_SCRIPTS = [
-    'mobile-chrome-shim.js?rev=403',
-    'assets/dashboard-mobile.js?rev=403',
-    'mobile-data-bridge.js?rev=403',
-    'mobile-app-shell.js?rev=403',
-    'mobile-remote.js?rev=403'
+    'mobile-chrome-shim.js?rev=404',
+    'assets/dashboard-mobile.js?rev=404',
+    'mobile-data-bridge.js?rev=404',
+    'mobile-app-shell.js?rev=404',
+    'mobile-remote.js?rev=404'
   ];
 
+  // REV404: one transport request per credential/path, shared by boot/watch.
+  const licenseRequests = new Map();
+  let rememberedRefreshPromise = null;
+  let lastLicenseSuccessAt = 0;
+  let directUrlPromise = null;
   let appStarted = false;
   let busy = false;
   let watchBusy = false;
@@ -63,7 +68,12 @@
     return Number(httpStatus || 0) >= 500;
   }
 
-  async function resolveDirectLicenseUrl() {
+  function resolveDirectLicenseUrl() {
+    if (!directUrlPromise) directUrlPromise = fetchDirectLicenseUrl();
+    return directUrlPromise;
+  }
+
+  async function fetchDirectLicenseUrl() {
     let resolved = LICENSE_DIRECT_FALLBACK_URL;
     const controller = typeof AbortController === 'function' ? new AbortController() : null;
     const timer = setTimeout(() => {
@@ -179,6 +189,7 @@
             iframe.contentWindow.postMessage({
               type: 'TF_LICENSE_RELAY_LOOKUP',
               id,
+              directOnly: true,
               path: isLicenseFallbackPath(path) ? path : '/mobile/login',
               body: {
                 email: cleanEmail(body && body.email),
@@ -210,12 +221,20 @@
 
   async function licenseFallbackLookup(body, timeoutMs = 30000, path = '/mobile/login') {
     if (isAndroidClient()) {
-      try { return await androidRelayLicenseLookup(body, timeoutMs, path); } catch (_) {}
+      return await androidRelayLicenseLookup(body, Math.max(timeoutMs, 35000), path);
     }
     return await directLicenseLookup(body, Math.max(timeoutMs, 25000));
   }
 
-  async function api(path, body, timeoutMs = 15000) {
+  function api(path, body, timeoutMs = 40000) {
+    const key = JSON.stringify([path, cleanEmail(body && body.email), normalizeToken(body && body.token)]);
+    if (licenseRequests.has(key)) return licenseRequests.get(key);
+    const request = apiTransport(path, body, timeoutMs).finally(() => licenseRequests.delete(key));
+    licenseRequests.set(key, request);
+    return request;
+  }
+
+  async function apiTransport(path, body, timeoutMs = 40000) {
     const controller = typeof AbortController === 'function' ? new AbortController() : null;
     const timeout = setTimeout(() => {
       try { controller && controller.abort(); } catch (_) {}
@@ -233,8 +252,8 @@
           deviceType: 'MOBILE',
           clientType: 'MOBILE',
           mobilePlatform: platformName(),
-          mobileVersion: '1.17.16',
-          remoteRevision: 'REV403',
+          mobileVersion: '1.17.17',
+          remoteRevision: 'REV404',
           requestNonce: String(Date.now()) + '-' + Math.random().toString(36).slice(2)
         })
       });
@@ -244,7 +263,7 @@
       try { result = JSON.parse(text); }
       catch (_) {
         if (isLicenseFallbackPath(path)) {
-          return await licenseFallbackLookup(body, Math.max(timeoutMs, 30000), path);
+          return await licenseFallbackLookup(body, 30000, path);
         }
         throw new Error('Respons server bukan JSON.');
       }
@@ -254,18 +273,18 @@
       // GitHub Pages relay + public license lookup before treating it as denial.
       if (isLicenseFallbackPath(path) && isAndroidClient() &&
           !(result && result.valid === true && result.sessionValid !== false)) {
-        return await licenseFallbackLookup(body, Math.max(timeoutMs, 30000), path);
+        return await licenseFallbackLookup(body, 30000, path);
       }
 
       if (isLicenseFallbackPath(path) && shouldUseDirectLicenseFallback(result, response.status)) {
-        return await licenseFallbackLookup(body, Math.max(timeoutMs, 30000), path);
+        return await licenseFallbackLookup(body, 30000, path);
       }
 
       if (!response.ok && !result.message) result.message = 'HTTP ' + response.status;
       return result;
     } catch (error) {
       if (isLicenseFallbackPath(path) && error && (error.name === 'AbortError' || error.name === 'TypeError')) {
-        return await licenseFallbackLookup(body, Math.max(timeoutMs, 30000), path);
+        return await licenseFallbackLookup(body, 30000, path);
       }
       throw error;
     } finally {
@@ -484,8 +503,14 @@
     }
   }
 
+  function isTemporaryLicenseResult(result) {
+    const code = String(result && (result.code || result.error) || '').toUpperCase();
+    return !result || shouldUseDirectLicenseFallback(result, 0) ||
+      /TIMEOUT|NETWORK|UNAVAILABLE|RATE_LIMIT|SERVER_ERROR|INTERNAL_ERROR|TEMPORARY|RETRY/.test(code) || result.retry === true;
+  }
+
   function isExplicitDenial(result) {
-    return !!(result && (result.valid === false || result.sessionValid === false));
+    return !isTemporaryLicenseResult(result) && !!(result && (result.valid === false || result.sessionValid === false));
   }
 
   async function login(email, token) {
@@ -505,8 +530,8 @@
       if (!(result && result.valid === true && result.sessionValid !== false)) {
         const code = String(result && (result.code || result.error) || 'MOBILE_LOGIN_FAILED');
         const message = String(result && (result.message || result.code || result.error) || 'Aktivasi gagal.');
-        forgetCredentials();
-        setStatus(`[${code}] ${message}`, 'error');
+        if (isExplicitDenial(result)) forgetCredentials();
+        setStatus(isTemporaryLicenseResult(result) ? 'Server aktivasi belum tersedia. Coba lagi; aktivasi tersimpan tetap dipertahankan.' : `[${code}] ${message}`, 'error');
         return false;
       }
 
@@ -526,7 +551,14 @@
     }
   }
 
-  async function silentRefreshRememberedAuthorization() {
+  function silentRefreshRememberedAuthorization() {
+    if (!rememberedRefreshPromise) {
+      rememberedRefreshPromise = refreshRememberedAuthorization().finally(() => { rememberedRefreshPromise = null; });
+    }
+    return rememberedRefreshPromise;
+  }
+
+  async function refreshRememberedAuthorization() {
     if (silentRefreshBusy || kicked || !activeCredentials) return false;
     silentRefreshBusy = true;
 
@@ -534,10 +566,11 @@
       const result = await api('/mobile/login', {
         email: activeCredentials.email,
         token: activeCredentials.token
-      }, 8000);
+      }, 40000);
 
       if (result && result.valid === true && result.sessionValid !== false) {
         activeState = { ...(activeState || {}), ...result, valid: true, checkedAt: Date.now(), cached: false };
+        lastLicenseSuccessAt = Date.now();
         armExactExpiry(activeState);
         rememberAuthorization(activeCredentials.email, activeCredentials.token, activeState);
         exposeEphemeralAuth();
@@ -602,17 +635,19 @@
   }
 
   async function validateLiveLicense() {
-    if (watchBusy || kicked || !activeCredentials) return;
+    if (rememberedRefreshPromise) return rememberedRefreshPromise;
+    if (watchBusy || kicked || !activeCredentials || Date.now() - lastLicenseSuccessAt < 45000) return;
     watchBusy = true;
 
     try {
       const result = await api('/license-check', {
         email: activeCredentials.email,
         token: activeCredentials.token
-      }, 8000);
+      }, 40000);
 
       if (result && result.valid === true && result.sessionValid !== false) {
         activeState = { ...(activeState || {}), ...result, valid: true, checkedAt: Date.now() };
+        lastLicenseSuccessAt = Date.now();
         armExactExpiry(activeState);
         rememberAuthorization(activeCredentials.email, activeCredentials.token, activeState);
         exposeEphemeralAuth();
