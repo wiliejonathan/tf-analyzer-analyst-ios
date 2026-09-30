@@ -4506,6 +4506,22 @@ severity:st.severity, sourcePair:st.pair
 });
 }
 });
+// REV396: every known analyst gets an aggregate state. If the analyst has no
+// trade in the global newest month, it is treated as healthy for name coloring.
+for (let i = 0; i < src.length; i++) {
+const r = src[i];
+if (!r || r.isWithdraw) continue;
+const analyst = String(r.analyst || '').trim();
+if (!analyst) continue;
+const key = tf_latestRiskNormAnalyst(analyst);
+if (!byAnalyst.has(key)) {
+byAnalyst.set(key, {
+analyst, monthKey:latestMonth,
+drawdown:false, consecutiveLoss:false,
+severity:0, sourcePair:''
+});
+}
+}
 __tfLatestRiskState = { monthKey:latestMonth, byPair, byAnalyst, signature };
 try { window.__tfLatestRiskState = __tfLatestRiskState; } catch (e) { }
 return __tfLatestRiskState;
