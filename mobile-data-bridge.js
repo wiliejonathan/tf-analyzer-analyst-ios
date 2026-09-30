@@ -376,6 +376,39 @@ window.tfMobileFinishImportLoadingWhenReady=tfMobileFinishImportLoadingWhenReady
 
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function clone(v,f){try{return JSON.parse(JSON.stringify(v));}catch(e){return f;}}
+function tfMobileParseImportJsonV399(text,fileName){
+  let src=String(text==null?"":text);
+  src=src.replace(/^\uFEFF/,"").replace(/^\s*\uFEFF/,"").trim();
+  if(!src)throw new Error((fileName||"File JSON")+": file kosong.");
+  let parsed;
+  try{parsed=JSON.parse(src);}catch(e){
+    // Some editors/exporters prepend UTF-8 BOM or harmless NUL padding.
+    const retry=src.replace(/^\u0000+/,"").replace(/\u0000+$/,"").trim();
+    if(retry!==src){try{parsed=JSON.parse(retry);}catch(_){parsed=undefined;}}
+    if(parsed===undefined)throw new Error((fileName||"File JSON")+": JSON tidak valid. "+(e&&e.message?e.message:e));
+  }
+  // Accept one level of accidentally double-encoded JSON.
+  if(typeof parsed==="string"){
+    const nested=parsed.replace(/^\uFEFF/,"").trim();
+    if((nested.startsWith("{")&&nested.endsWith("}"))||(nested.startsWith("[")&&nested.endsWith("]"))){
+      try{parsed=JSON.parse(nested);}catch(_){}
+    }
+  }
+  if(!parsed||typeof parsed!=="object")throw new Error((fileName||"File JSON")+": struktur JSON tidak valid.");
+  return parsed;
+}
+function tfMobileLooksCanonicalStorageV399(value){
+  return !!(value&&typeof value==="object"&&!Array.isArray(value)&&(
+    Array.isArray(value.tfHistorySignals)||
+    (value.tfAnalystSources&&typeof value.tfAnalystSources==="object"&&!Array.isArray(value.tfAnalystSources))||
+    (value.tfMonthlyStats&&typeof value.tfMonthlyStats==="object"&&!Array.isArray(value.tfMonthlyStats))||
+    Array.isArray(value.tfScoreHistory)
+  ));
+}
+function tfMobilePayloadStorageV399(payload){
+  if(!payload||typeof payload!=="object")return {};
+  return payload.storage&&typeof payload.storage==="object"&&!Array.isArray(payload.storage)?payload.storage:payload;
+}
 function storageGet(keys){return new Promise(r=>chrome.storage.local.get(keys,x=>r(x||{})));}
 function storageSet(o){
   return new Promise((resolve,reject)=>{
@@ -446,9 +479,20 @@ function mergeMonthly(a,b){
 }
 function mergeObjects(a,b){return {...(clone(a&&typeof a==="object"?a:{},{})||{}),...(clone(b&&typeof b==="object"?b:{},{})||{})};}
 function combine(payloads,names){
-  const list=payloads.filter(x=>x&&typeof x==="object");
+  const list=(payloads||[]).filter(x=>x&&typeof x==="object");
   if(!list.length)throw new Error("Tidak ada file valid.");
-  const first=list[0].storage&&typeof list[0].storage==="object"?list[0].storage:list[0];
+  const normalized=list.map((payload)=>{
+    const raw=tfMobilePayloadStorageV399(payload);
+    const canonical=!!(
+      (payload&&payload.schema===SCHEMA&&payload.storage&&typeof payload.storage==="object") ||
+      tfMobileLooksCanonicalStorageV399(raw)
+    );
+    return {
+      payload,
+      storage:tfMobileNormalizeStorageV31(raw,{canonicalPc:canonical})
+    };
+  });
+  const first=normalized[0].storage;
   let out={...(first||{})};
   out.tfHistorySignals=Array.isArray(first.tfHistorySignals)?first.tfHistorySignals.slice():[];
   out.tfScoreHistory=Array.isArray(first.tfScoreHistory)?first.tfScoreHistory.slice():[];
@@ -456,19 +500,20 @@ function combine(payloads,names){
   ["tfNoDataPairs","tfAvgSlPips","tfAnalystSources","tfAnalystNameCacheByUrl"].forEach(k=>{
     out[k]=mergeObjects({},first[k]);
   });
-  for(let i=1;i<list.length;i++){
-    const src=list[i].storage&&typeof list[i].storage==="object"?list[i].storage:list[i];
+  for(let i=1;i<normalized.length;i++){
+    const src=normalized[i].storage;
     out.tfHistorySignals=mergeHistory(out.tfHistorySignals,src.tfHistorySignals);
     out.tfScoreHistory=mergeScore(out.tfScoreHistory,src.tfScoreHistory);
     out.tfMonthlyStats=mergeMonthly(out.tfMonthlyStats,src.tfMonthlyStats);
     ["tfNoDataPairs","tfAvgSlPips","tfAnalystSources","tfAnalystNameCacheByUrl"].forEach(k=>out[k]=mergeObjects(out[k],src[k]));
     Object.keys(src||{}).forEach(k=>{if(!(k in out))out[k]=clone(src[k],src[k]);});
   }
+  const firstPayload=normalized[0].payload||{};
   return {
     schema:SCHEMA,exportedAt:new Date().toISOString(),combined:list.length>1,
-    combinedFileCount:list.length,combinedFiles:names.slice(),
-    exportedBy:list[0].exportedBy||null,exportedByList:list[0].exportedByList||[],
-    localState:clone(list[0].localState||{},{}),storage:out
+    combinedFileCount:list.length,combinedFiles:(names||[]).slice(),
+    exportedBy:firstPayload.exportedBy||null,exportedByList:firstPayload.exportedByList||[],
+    localState:clone(firstPayload.localState||{},{}),storage:out
   };
 }
 function tfMobileFirstFiniteV31(){
@@ -523,14 +568,17 @@ function tfMobileBuildSourcesFromHistoryV31(history,existing){
 }
 function tfMobileNormalizeStorageV31(input,opts){
   const st=input&&typeof input==='object'?clone(input,{}):{};
-  const canonicalPc=!!(opts&&opts.canonicalPc===true);
+  const canonicalPc=!!(
+    (opts&&opts.canonicalPc===true) ||
+    tfMobileLooksCanonicalStorageV399(st)
+  );
 
   // REV381 MOBILE-ONLY CALCULATION PARITY.
   // Official PC REV379 export/Remote bundles are authoritative. Preserve their
   // calculation input rows byte-for-value instead of running legacy Mobile
   // aliases/coercion/filtering over them. Legacy files still use normalization.
   const hasCanonicalPcHistory=canonicalPc&&Array.isArray(st.tfHistorySignals);
-  const legacyHistoryCandidate=st.historySignals??st.tfHistory??st.history??st.signals;
+  const legacyHistoryCandidate=st.tfHistorySignals??st.historySignals??st.tfHistory??st.history??st.signals;
   const history=hasCanonicalPcHistory
     ? clone(st.tfHistorySignals,st.tfHistorySignals.slice())
     : tfMobileNormalizeHistoryV31(legacyHistoryCandidate);
@@ -544,7 +592,12 @@ function tfMobileNormalizeStorageV31(input,opts){
   );
   st.tfAnalystSources=hasCanonicalSources
     ? clone(st.tfAnalystSources,st.tfAnalystSources)
-    : tfMobileBuildSourcesFromHistoryV31(st.tfHistorySignals,st.analystSources);
+    : tfMobileBuildSourcesFromHistoryV31(
+        st.tfHistorySignals,
+        (st.tfAnalystSources&&typeof st.tfAnalystSources==='object'&&!Array.isArray(st.tfAnalystSources))
+          ? st.tfAnalystSources
+          : st.analystSources
+      );
 
   st.tfMonthlyStats=(st.tfMonthlyStats&&typeof st.tfMonthlyStats==='object'&&!Array.isArray(st.tfMonthlyStats))
     ? st.tfMonthlyStats
@@ -608,13 +661,14 @@ window.tfMobileRecoverRenderV31=tfMobileRecoverRenderV31;
 
 async function applyPayload(payload,fileNames){
   if(!payload||typeof payload!=="object")throw new Error("Format file tidak valid.");
-  const hasOfficialPcEnvelope=(
+  const rawStorage=tfMobilePayloadStorageV399(payload);
+  const hasOfficialPcEnvelope=!!(
     payload.schema===SCHEMA &&
     payload.storage &&
     typeof payload.storage==="object"
   );
-  const rawStorage=payload.storage&&typeof payload.storage==="object"?payload.storage:payload;
-  const st=tfMobileNormalizeStorageV31(rawStorage,{canonicalPc:hasOfficialPcEnvelope});
+  const hasCanonicalRawStorage=tfMobileLooksCanonicalStorageV399(rawStorage);
+  const st=tfMobileNormalizeStorageV31(rawStorage,{canonicalPc:(hasOfficialPcEnvelope||hasCanonicalRawStorage)});
   const defaults={tfMonthlyStats:{},tfHistorySignals:[],tfScoreHistory:[],tfNoDataPairs:{},tfAvgSlPips:{},tfAnalystSources:{}};
   Object.keys(defaults).forEach(k=>{if(!(k in st))st[k]=defaults[k];});
   st.tfSelectedTimeRange=st.tfSelectedTimeRange||"all_time";
@@ -651,6 +705,8 @@ async function applyPayload(payload,fileNames){
 }
 async function importFiles(files,opts={}){
   if(!files.length)return;
+  // REV399: a previous Cancel must never poison the next Import attempt.
+  window.__tfRev293ImportCancelled=false;
 
   const started=performance.now();
   const payloads=[];
@@ -676,7 +732,7 @@ async function importFiles(files,opts={}){
       tfMobileUpdateImportLoading(files.length>1?`Memproses file ${i+1} dari ${files.length}…`:"Memproses data JSON…","Mengurai history, analyst, dan statistik.");
       status(files.length>1?`Membaca file ${i+1}/${files.length}…`:"Memproses JSON…");
       await new Promise(resolve=>requestAnimationFrame(resolve));
-      const p=JSON.parse(txt);
+      const p=tfMobileParseImportJsonV399(txt,f.name||("File "+(i+1)));
       if(p.schema&&p.schema!==SCHEMA)console.warn("Schema berbeda:",p.schema);
       payloads.push(p);
     }
@@ -692,19 +748,39 @@ async function importFiles(files,opts={}){
     // without canonicalPc here, so tfHistorySignals/tfAnalystSources from a valid
     // tf_multi_analyst_export_v1 could be treated as legacy aliases and become empty
     // before applyPayload() ever saw the official envelope.
+    const rawImportStorage=tfMobilePayloadStorageV399(payload);
     const hasOfficialPcEnvelope=!!(
       payload &&
       payload.schema===SCHEMA &&
       payload.storage &&
       typeof payload.storage==='object'
     );
+    const hasCanonicalRawStorage=tfMobileLooksCanonicalStorageV399(rawImportStorage);
     const normalizedStorage=tfMobileNormalizeStorageV31(
-      payload&&payload.storage&&typeof payload.storage==='object'?payload.storage:payload,
-      {canonicalPc:hasOfficialPcEnvelope}
+      rawImportStorage,
+      {canonicalPc:(hasOfficialPcEnvelope||hasCanonicalRawStorage)}
     );
     if(payload&&payload.storage&&typeof payload.storage==='object')payload.storage=normalizedStorage;else Object.assign(payload,normalizedStorage);
     const trades=Array.isArray(normalizedStorage.tfHistorySignals)?normalizedStorage.tfHistorySignals.length:0;
     const analystSources=normalizedStorage.tfAnalystSources&&typeof normalizedStorage.tfAnalystSources==="object"?normalizedStorage.tfAnalystSources:{};
+    const monthlyCount=normalizedStorage.tfMonthlyStats&&typeof normalizedStorage.tfMonthlyStats==="object"?Object.keys(normalizedStorage.tfMonthlyStats).length:0;
+    const scoreCount=Array.isArray(normalizedStorage.tfScoreHistory)?normalizedStorage.tfScoreHistory.length:0;
+    const recognizedInput=!!(
+      hasOfficialPcEnvelope ||
+      hasCanonicalRawStorage ||
+      rawImportStorage.historySignals ||
+      rawImportStorage.tfHistory ||
+      rawImportStorage.history ||
+      rawImportStorage.signals ||
+      rawImportStorage.analystSources ||
+      rawImportStorage.scoreHistory
+    );
+    if(!recognizedInput){
+      throw new Error("File JSON valid, tetapi bukan format data TF Analyzer yang dikenali.");
+    }
+    if(trades===0&&Object.keys(analystSources).length===0&&monthlyCount===0&&scoreCount===0){
+      throw new Error("File JSON terbaca, tetapi tidak berisi History/Analis/Monthly/Score yang dapat di-import. Data lama tidak dihapus.");
+    }
     const expectedAnalysts=Object.keys(analystSources).length;
     let expectedSummaryRows=0;
     Object.values(analystSources).forEach(source=>{
@@ -760,8 +836,10 @@ async function importFiles(files,opts={}){
     return {ok:true,trades,analysts:expectedAnalysts,reload:false,rendered,activeNav:'table1'};
 
   }catch(e){
-    tfMobileUpdateImportLoading("Import gagal",e&&e.message?String(e.message):"File tidak dapat diproses.");
-    setTimeout(tfMobileHideImportLoading,900);
+    const message=e&&e.message?String(e.message):"File tidak dapat diproses.";
+    tfMobileUpdateImportLoading("Import gagal",message);
+    status("Import gagal • "+message,false);
+    setTimeout(tfMobileHideImportLoading,1200);
     throw e;
   }
 }
