@@ -2864,6 +2864,8 @@ const TF_TRADE_RANGE_OPTIONS = [
 { key: 'y5', label: '5Y', title: '5 Year', monthsBack: 60 }
 ];
 let tfTradeTimeRangeKey = 'all';
+// REV392: exact calendar boundary used by Table 3 auto-checkbox + Holding Period.
+let tfTradeRangeStartMonthIdx = null;
 const TF_SINGLE_MONTH_STORAGE_KEY = 'tf_trade_single_month_v1';
 let tfTradeSingleMonthKey = '';
 let allMonthKeysSorted = [];
@@ -3520,6 +3522,8 @@ function tf_initAutoUntickStartOfMonthRule(rowsSortedByClosed) {
 try {
 if (!Array.isArray(rowsSortedByClosed) || rowsSortedByClosed.length === 0)
 return;
+// Reset previous automatic state. Manual choices remain for rows that are
+// inside the active period; rows outside the period are force-disabled below.
 try {
 for (let i = 0; i < rowsSortedByClosed.length; i++) {
 const r0 = rowsSortedByClosed[i];
@@ -3532,9 +3536,11 @@ if (tf_historyRowManualOverrideSet && tf_historyRowManualOverrideSet.has(id0))
 continue;
 if (tf_historyRowEnabledMap.has(id0))
 tf_historyRowEnabledMap.delete(id0);
+r0.__tfAutoUnticked = false;
 }
 }
 catch (e) { }
+
 const timeRangeActive = (String(tfTradeTimeRangeKey || 'all') !== 'all') || !!tfTradeSingleMonthKey;
 let isCustomDateFilter = false;
 try {
@@ -3544,12 +3550,10 @@ const s = tf_dayKey(equityFilterStart);
 const e = tf_dayKey(equityFilterEnd);
 const mn = tf_dayKey(equityFilterMin);
 const mx = tf_dayKey(equityFilterMax);
-if (s !== null && e !== null && mn !== null && mx !== null) {
+if (s !== null && e !== null && mn !== null && mx !== null)
 isCustomDateFilter = (s !== mn) || (e !== mx);
-}
-else {
+else
 isCustomDateFilter = true;
-}
 }
 else {
 isCustomDateFilter = true;
@@ -3557,6 +3561,27 @@ isCustomDateFilter = true;
 }
 }
 catch (e) { }
+
+let thresholdDay = null;
+// Custom date range has the highest priority and uses its exact first day.
+if (isCustomDateFilter) {
+try {
+const a = tf_dayKey(equityFilterStart);
+const b = tf_dayKey(equityFilterEnd);
+if (a !== null && b !== null)
+thresholdDay = Math.min(a, b);
+}
+catch (e) { }
+}
+// Single-month and 1M/2M/... ranges use the FIRST DAY OF THE RANGE,
+// never "first trade closed". This prevents 1M from admitting a 57d carry-over.
+if (thresholdDay === null && timeRangeActive && Number.isFinite(tfTradeRangeStartMonthIdx)) {
+const y = Math.floor(tfTradeRangeStartMonthIdx / 12);
+const m = tfTradeRangeStartMonthIdx - (y * 12);
+thresholdDay = new Date(y, m, 1, 0, 0, 0, 0).getTime();
+}
+// Safe fallback for legacy/custom states.
+if (thresholdDay === null && timeRangeActive) {
 let firstClosedKey = null;
 for (let i = 0; i < rowsSortedByClosed.length; i++) {
 const r = rowsSortedByClosed[i];
@@ -3568,49 +3593,19 @@ continue;
 if (firstClosedKey === null || ck < firstClosedKey)
 firstClosedKey = ck;
 }
-if (firstClosedKey === null)
-return;
-const firstMonthKey = tf_monthKeyFromSortKey(firstClosedKey);
-if (!firstMonthKey)
-return;
-let thresholdDay = null;
-// REV224: for the per-calendar-month selector, the boundary must be the
-// first day of the selected month, NOT the first trade's Closed At day.
-// Otherwise a valid trade created earlier in the same month (for example
-// Created 22-Jun, Closed 23-Jun) is incorrectly auto-unticked, which makes
-// Performance/Probability and Equity Curve appear empty. Carry-over trades
-// created before the selected month are still excluded by this rule.
-if (tfTradeSingleMonthKey) {
-try {
-const mm = String(tfTradeSingleMonthKey || '').match(/^(\d{4})-(\d{2})$/);
-if (mm) {
-const yy = parseInt(mm[1], 10);
-const mo = parseInt(mm[2], 10);
-if (Number.isFinite(yy) && Number.isFinite(mo) && mo >= 1 && mo <= 12)
-thresholdDay = new Date(yy, mo - 1, 1, 0, 0, 0, 0).getTime();
-}
-}
-catch (e) { }
-if (thresholdDay === null)
+if (firstClosedKey !== null)
 thresholdDay = tf_dayKey(firstClosedKey);
-}
-else if (isCustomDateFilter || timeRangeActive) {
-thresholdDay = tf_dayKey(firstClosedKey);
-}
-else {
-return;
 }
 if (thresholdDay === null)
 return;
+
+// REV392 HARD RANGE BOUNDARY:
+// every trade shown for this range must have Created At inside the active range.
+// It applies across ALL closed months, not only the first month. A stale/manual
+// checkbox override cannot re-include a carry-over trade from before the range.
 for (let i = 0; i < rowsSortedByClosed.length; i++) {
 const r = rowsSortedByClosed[i];
 if (!r || r.isWithdraw)
-continue;
-const ck = tf_closedKeyOf(r);
-if (!Number.isFinite(ck) || ck <= 0)
-continue;
-const mk = tf_monthKeyFromSortKey(ck);
-if (mk !== firstMonthKey)
 continue;
 const crk = tf_createdKeyOf(r);
 const createdDay = tf_dayKey(crk);
@@ -3620,8 +3615,11 @@ if (createdDay < thresholdDay) {
 const id = tf_historyRowId(r);
 if (!id)
 continue;
-if (tf_historyRowManualOverrideSet && tf_historyRowManualOverrideSet.has(id))
-continue;
+try {
+if (tf_historyRowManualOverrideSet)
+tf_historyRowManualOverrideSet.delete(id);
+}
+catch (e) { }
 tf_historyRowEnabledMap.set(id, false);
 r.__tfAutoUnticked = true;
 }
@@ -12849,7 +12847,11 @@ tf_saveTradeTimeRangePreference();
 tf_syncTradeRangeButtonsUI();
 }
 function tf_filterRowsByTradeTimeRange(rows, maxMonthIdx) {
+// REV392: preserve the exact start month of the selected Time Range.
+// Holding/Table 3 use this to reject carry-over trades by Created At.
+tfTradeRangeStartMonthIdx = null;
 if (tfTradeSingleMonthKey) {
+tfTradeRangeStartMonthIdx = tf_monthKeyToIndex(tfTradeSingleMonthKey);
 return (rows || []).filter((r) => {
 const mk = tf_monthKeyFromSortKey(tf_getPrimarySortKey(r));
 return mk === tfTradeSingleMonthKey;
@@ -12863,6 +12865,7 @@ const endIdx = Number.isFinite(maxMonthIdx) ? maxMonthIdx : null;
 if (endIdx == null)
 return rows;
 const startIdx = endIdx - (monthsBack - 1);
+tfTradeRangeStartMonthIdx = startIdx;
 return (rows || []).filter((r) => {
 const mi = tf_sortKeyToMonthIndex(tf_getPrimarySortKey(r));
 if (mi == null)
