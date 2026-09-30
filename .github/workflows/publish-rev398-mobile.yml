@@ -106,7 +106,7 @@ jobs:
           assert "lookup(d.path||'/mobile/login'" in proxy
           assert "remoteRevision:'REV398'" in proxy
           assert 'REV398_ANDROID_WEB_RELAY' in proxy
-          assert '?rev=397' in idx
+          assert '?rev=398' in idx
           assert 'rev398-hard-inline-analyst-colors' in sw
           assert "var CURRENT_TAG = 'v1.17.11';" in upd
           assert 'function tf_forceLatestRiskTextColor' in dash
@@ -139,5 +139,5 @@ jobs:
             gh release edit "$TAG" --target "$GITHUB_SHA" --title 'TF Analyzer Analyst V1.17.11 - REV398 Hard Inline Analyst Colors' --notes-file "$NOTES" --latest
             gh release upload "$TAG" "$OUT" "$OUT.sha256" --clobber
           else
-            gh release create "$TAG" "$OUT" "$OUT.sha256" --target "$GITHUB_SHA" --title 'TF Analyzer Analyst V1.17.11 - REV398 All Analyst Colors' --notes-file "$NOTES" --latest
+            gh release create "$TAG" "$OUT" "$OUT.sha256" --target "$GITHUB_SHA" --title 'TF Analyzer Analyst V1.17.11 - REV398 Hard Inline Analyst Colors' --notes-file "$NOTES" --latest
           fi
