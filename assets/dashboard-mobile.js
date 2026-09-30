@@ -4561,7 +4561,29 @@ return st;
 }
 catch (e) { return null; }
 }
-// REV394 presentation: smaller icons, left placement, ticker color-only.\n// ===== END REV393 latest-month risk warning system =====
+// REV395: analyst NAME color is always aggregate across all pairs.
+// Pair-specific state is used only for icons/content that represents a specific pair.
+function tf_applyLatestRiskPairIconOnly(el, analyst, pair, iconPosition) {
+try {
+if (!el) return null;
+el.querySelectorAll && el.querySelectorAll('[data-tf-latest-risk-icon="1"]').forEach((x) => x.remove());
+const st = tf_getLatestRiskState(analyst, pair);
+if (!st || !st.severity) return null;
+const icon = document.createElement('span');
+icon.setAttribute('data-tf-latest-risk-icon','1');
+const pos = String(iconPosition || 'right').toLowerCase() === 'left' ? 'left' : 'right';
+icon.className = 'tf-latest-risk-icon tf-latest-risk-icon-' + pos + ' ' + (st.severity >= 2 ? 'tf-latest-risk-icon-critical' : 'tf-latest-risk-icon-warning');
+icon.textContent = st.severity >= 2 ? '×' : '!';
+icon.setAttribute('aria-label', tf_latestRiskReason(st));
+icon.title = tf_latestRiskReason(st);
+if (pos === 'left') el.insertBefore(icon, el.firstChild || null);
+else el.appendChild(icon);
+return st;
+}
+catch (e) { return null; }
+}
+// REV394 presentation: smaller icons, left placement, ticker color-only.
+// REV395 presentation: every analyst NAME uses aggregate analyst severity across all pairs.\n// ===== END REV393 latest-month risk warning system =====
 
 function renderSummaryTable() {
 const tbody = document.querySelector('#summary-table tbody');
@@ -5727,7 +5749,7 @@ const nameCell = document.createElement('td');
 nameCell.textContent = formatAnalystDisplayName(a.baseName || a.name);
 nameCell.title = String(a.baseName || a.name || '').trim();
 nameCell.classList.add('monthly-sticky-col-2');
-tf_applyLatestRiskToElement(nameCell, a.baseName || a.name, a.pair || getPrimaryPairForAnalyst(a), false);
+tf_applyLatestRiskToElement(nameCell, a.baseName || a.name, null, false);
 tr.appendChild(nameCell);
 const pairCell = document.createElement('td');
 const pairText = (Array.isArray(a.pairs) && a.pairs.length)
@@ -6568,7 +6590,8 @@ const analystCell = tf_markHistoryCell(document.createElement('td'), 'analyst');
 analystCell.classList.add('tf-risk-name-left');
 analystCell.textContent = isWithdrawRow ? 'Withdraw' : formatAnalystDisplayName(row.analyst || '');
 analystCell.title = isWithdrawRow ? 'Withdraw' : String(row.analyst || '').trim();
-if (!isWithdrawRow) tf_applyLatestRiskToElement(analystCell, row.analyst || '', row.pair || '', true, 'left');
+if (!isWithdrawRow) tf_applyLatestRiskToElement(analystCell, row.analyst || '', null, false);
+tf_applyLatestRiskPairIconOnly(analystCell, row.analyst || '', row.pair || '', 'left');
 tr.appendChild(analystCell);
 const balanceCompoundCell = tf_markHistoryCell(document.createElement('td'), 'balance');
 balanceCompoundCell.classList.add('text-right', 'mono');
@@ -6775,7 +6798,7 @@ let a=avgAgg.get(k); if(!a){a={sum:0,count:0};avgAgg.set(k,a);} a.sum+=ms;a.coun
 function renderSide(tbody,subset){
 tbody.innerHTML='';
 if(!subset.length){const tr=document.createElement('tr');tr.className='tf-holding-empty-row';const td=document.createElement('td');td.colSpan=3;td.textContent=names.length?'—':'Belum ada trade yang tampil di Table 3 untuk filter aktif.';tr.appendChild(td);tbody.appendChild(tr);return;}
-subset.forEach(name=>{const tr=document.createElement('tr');const n=document.createElement('td');n.className='tf-holding-analyst';n.textContent=name;try{const sep=name.lastIndexOf(' - ');if(sep>0)tf_applyLatestRiskToElement(n,name.slice(0,sep),name.slice(sep+3),true,'left');}catch(e){}const m=document.createElement('td');m.className='mono tf-holding-value';m.textContent=tf_formatHoldingDuration(maxBy.get(name));const a=document.createElement('td');a.className='mono tf-holding-value';const g=avgAgg.get(name);a.textContent=g&&g.count?tf_formatHoldingDuration(g.sum/g.count):'—';tr.append(n,m,a);tbody.appendChild(tr);});
+subset.forEach(name=>{const tr=document.createElement('tr');const n=document.createElement('td');n.className='tf-holding-analyst';n.textContent=name;try{const sep=name.lastIndexOf(' - ');if(sep>0)tf_applyLatestRiskToElement(n,name.slice(0,sep),null,false);tf_applyLatestRiskPairIconOnly(n,name.slice(0,sep),name.slice(sep+3),'left');}catch(e){}const m=document.createElement('td');m.className='mono tf-holding-value';m.textContent=tf_formatHoldingDuration(maxBy.get(name));const a=document.createElement('td');a.className='mono tf-holding-value';const g=avgAgg.get(name);a.textContent=g&&g.count?tf_formatHoldingDuration(g.sum/g.count):'—';tr.append(n,m,a);tbody.appendChild(tr);});
 }
 const splitAt=Math.ceil(names.length/2);renderSide(leftBody,names.slice(0,splitAt));renderSide(rightBody,names.slice(splitAt));
 }
@@ -15128,7 +15151,7 @@ setSpinner.setAttribute('data-analyst', String(entry.baseName || ''));
 setSpinner.setAttribute('data-platform-id', String(platformId));
 try {
 tf_isignalUsers_applyAnalystLink(analystLink, entry.baseName);
-tf_applyLatestRiskToElement(analystLink, entry.baseName, entry.pair, false);
+tf_applyLatestRiskToElement(analystLink, entry.baseName, null, false);
 tf_isignalUsers_applySetBadge(setBadge, setSpinner, cfg, platformId, entry.baseName);
 }
 catch (e) { }
