@@ -4393,6 +4393,172 @@ startInput.value = formatDateInputFromSortKey(equityFilterStart);
 if (equityFilterEnd !== null)
 endInput.value = formatDateInputFromSortKey(equityFilterEnd);
 }
+
+// ===== REV393: Latest-month Drawdown / Consecutive Loss warning system =====
+// Rule source: raw Table 3 history, grouped by Analyst + Pair in the globally
+// newest Closed At month. Drawdown = the latest month ends below its own
+// intra-month cumulative-pips peak. Consecutive Loss = at least 2 negative-pips
+// trades in a row during that month. Both on the SAME Analyst+Pair => critical.
+let __tfLatestRiskState = { monthKey:'', byPair:new Map(), byAnalyst:new Map(), signature:'' };
+
+function tf_latestRiskNormAnalyst(v) {
+return String(v || '').trim().toLowerCase();
+}
+function tf_latestRiskNormPair(v) {
+return String(v || '').trim().toUpperCase();
+}
+function tf_latestRiskRowTs(row) {
+try {
+if (!row) return null;
+const k = Number(row.sortKey);
+if (Number.isFinite(k) && k > 0) return k;
+if (typeof tf_parseHistoryTableDateMs === 'function') {
+const t = tf_parseHistoryTableDateMs(row.displayDate || row.closedDate || row.createdDate || '');
+if (Number.isFinite(t) && t > 0) return t;
+}
+const d = Date.parse(String(row.displayDate || row.closedDate || row.createdDate || ''));
+return Number.isFinite(d) ? d : null;
+}
+catch (e) { return null; }
+}
+function tf_latestRiskMonthKey(ts) {
+try {
+if (typeof tf_monthKeyFromSortKey === 'function') {
+const mk = tf_monthKeyFromSortKey(ts);
+if (mk) return String(mk);
+}
+const d = new Date(ts);
+if (!Number.isFinite(d.getTime())) return '';
+return String(d.getFullYear()) + '-' + String(d.getMonth() + 1).padStart(2, '0');
+}
+catch (e) { return ''; }
+}
+function tf_refreshLatestRiskState(force) {
+try {
+const src = Array.isArray(historySignals) ? historySignals : [];
+let maxTs = null;
+for (let i = 0; i < src.length; i++) {
+const r = src[i];
+if (!r || r.isWithdraw || !String(r.analyst || '').trim() || !String(r.pair || '').trim()) continue;
+const ts = tf_latestRiskRowTs(r);
+if (ts == null) continue;
+if (maxTs == null || ts > maxTs) maxTs = ts;
+}
+const latestMonth = maxTs == null ? '' : tf_latestRiskMonthKey(maxTs);
+const signature = String(src.length) + '|' + String(maxTs || 0) + '|' + latestMonth;
+if (!force && __tfLatestRiskState && __tfLatestRiskState.signature === signature) return __tfLatestRiskState;
+const byPair = new Map();
+const groups = new Map();
+if (latestMonth) {
+for (let i = 0; i < src.length; i++) {
+const r = src[i];
+if (!r || r.isWithdraw) continue;
+const analyst = String(r.analyst || '').trim();
+const pair = tf_latestRiskNormPair(r.pair);
+if (!analyst || !pair) continue;
+const ts = tf_latestRiskRowTs(r);
+if (ts == null || tf_latestRiskMonthKey(ts) !== latestMonth) continue;
+let pips = (typeof r.pips === 'number') ? r.pips : parseFloat(r.pips);
+if (!Number.isFinite(pips)) continue;
+const key = tf_latestRiskNormAnalyst(analyst) + '|' + pair;
+if (!groups.has(key)) groups.set(key, { analyst, pair, rows:[] });
+groups.get(key).rows.push({ ts, pips });
+}
+}
+groups.forEach((g, key) => {
+g.rows.sort((a,b) => a.ts - b.ts);
+let cumulative = 0;
+let peak = 0;
+let currentLossStreak = 0;
+let maxLossStreak = 0;
+for (let i = 0; i < g.rows.length; i++) {
+const pips = Number(g.rows[i].pips) || 0;
+cumulative += pips;
+if (cumulative > peak) peak = cumulative;
+if (pips < 0) {
+currentLossStreak += 1;
+if (currentLossStreak > maxLossStreak) maxLossStreak = currentLossStreak;
+} else {
+currentLossStreak = 0;
+}
+}
+const drawdown = cumulative < (peak - 1e-9);
+const consecutiveLoss = maxLossStreak >= 2;
+const severity = (drawdown && consecutiveLoss) ? 2 : ((drawdown || consecutiveLoss) ? 1 : 0);
+byPair.set(key, {
+analyst:g.analyst, pair:g.pair, monthKey:latestMonth,
+drawdown, consecutiveLoss, maxLossStreak,
+endingPips:cumulative, peakPips:peak, severity
+});
+});
+const byAnalyst = new Map();
+byPair.forEach((st) => {
+if (!st || !st.severity) return;
+const key = tf_latestRiskNormAnalyst(st.analyst);
+const prev = byAnalyst.get(key);
+if (!prev || st.severity > prev.severity) {
+byAnalyst.set(key, {
+analyst:st.analyst, monthKey:latestMonth,
+drawdown:!!st.drawdown, consecutiveLoss:!!st.consecutiveLoss,
+severity:st.severity, sourcePair:st.pair
+});
+}
+});
+__tfLatestRiskState = { monthKey:latestMonth, byPair, byAnalyst, signature };
+try { window.__tfLatestRiskState = __tfLatestRiskState; } catch (e) { }
+return __tfLatestRiskState;
+}
+catch (e) {
+__tfLatestRiskState = { monthKey:'', byPair:new Map(), byAnalyst:new Map(), signature:'ERR' };
+return __tfLatestRiskState;
+}
+}
+function tf_getLatestRiskState(analyst, pair) {
+const st = tf_refreshLatestRiskState(false);
+const a = tf_latestRiskNormAnalyst(analyst);
+if (!a) return null;
+if (pair) return st.byPair.get(a + '|' + tf_latestRiskNormPair(pair)) || null;
+return st.byAnalyst.get(a) || null;
+}
+function tf_latestRiskReason(st) {
+if (!st || !st.severity) return '';
+const month = st.monthKey ? (' · ' + st.monthKey) : '';
+if (st.severity >= 2) return 'CRITICAL' + month + ': Drawdown + Consecutive Loss';
+if (st.drawdown) return 'WARNING' + month + ': Drawdown';
+if (st.consecutiveLoss) return 'WARNING' + month + ': Consecutive Loss';
+return '';
+}
+function tf_applyLatestRiskToElement(el, analyst, pair, showIcon) {
+try {
+if (!el) return null;
+const st = tf_getLatestRiskState(analyst, pair);
+el.classList.remove('tf-latest-risk-warning','tf-latest-risk-critical');
+el.querySelectorAll && el.querySelectorAll('[data-tf-latest-risk-icon="1"]').forEach((x) => x.remove());
+if (!st || !st.severity) {
+if (el.dataset && el.dataset.tfRiskBaseTitle != null) el.title = el.dataset.tfRiskBaseTitle;
+return null;
+}
+el.classList.add(st.severity >= 2 ? 'tf-latest-risk-critical' : 'tf-latest-risk-warning');
+if (el.dataset) {
+if (el.dataset.tfRiskBaseTitle == null) el.dataset.tfRiskBaseTitle = el.title || '';
+const base = el.dataset.tfRiskBaseTitle || '';
+el.title = (base ? base + ' · ' : '') + tf_latestRiskReason(st);
+}
+if (showIcon !== false) {
+const icon = document.createElement('span');
+icon.setAttribute('data-tf-latest-risk-icon','1');
+icon.className = 'tf-latest-risk-icon ' + (st.severity >= 2 ? 'tf-latest-risk-icon-critical' : 'tf-latest-risk-icon-warning');
+icon.textContent = st.severity >= 2 ? '×' : '!';
+icon.setAttribute('aria-label', tf_latestRiskReason(st));
+icon.title = tf_latestRiskReason(st);
+el.appendChild(icon);
+}
+return st;
+}
+catch (e) { return null; }
+}
+// ===== END REV393 latest-month risk warning system =====
+
 function renderSummaryTable() {
 const tbody = document.querySelector('#summary-table tbody');
 if (!tbody)
@@ -4414,6 +4580,8 @@ return allowedPairs.map(String).map((p) => p.toUpperCase()).includes(pairUpper);
 })
 : ANALYSTS.filter((a) => tf_isAnalystGloballySelected(a.baseName || a.name));
 const priceBusy = tf_isMyfxbookPriceLoading();
+try { tf_refreshLatestRiskState(true); } catch (e) { }
+const tf_table1WarnedAnalysts = new Set();
 filteredAnalysts.forEach((a) => {
 if (selectedAnalystPairsMapStats && typeof selectedAnalystPairsMapStats === 'object') {
 const baseName = a.baseName || a.name;
@@ -4453,6 +4621,10 @@ const tr = document.createElement('tr');
 const nameCell = document.createElement('td');
 nameCell.textContent = a.baseName || a.name;
 nameCell.classList.add('monthly-sticky-col-2');
+if (!tf_table1WarnedAnalysts.has(tf_latestRiskNormAnalyst(baseName))) {
+  tf_applyLatestRiskToElement(nameCell, baseName, null, true);
+  tf_table1WarnedAnalysts.add(tf_latestRiskNormAnalyst(baseName));
+}
 tr.appendChild(nameCell);
 const pairCell = document.createElement('td');
 pairCell.textContent = rowPair ? String(rowPair).toUpperCase() : '-';
@@ -5350,6 +5522,7 @@ const nameSpan = document.createElement("span");
 nameSpan.className = "tf-perf-name-text";
 nameSpan.textContent = it.display || it.name || "";
 nameSpan.title = String(it.name || "").trim();
+tf_applyLatestRiskToElement(nameSpan, it.name, null, true);
 cb.addEventListener("change", () => {
 sel[String(it.name)] = cb.checked;
 persistSel();
@@ -5550,6 +5723,7 @@ const nameCell = document.createElement('td');
 nameCell.textContent = formatAnalystDisplayName(a.baseName || a.name);
 nameCell.title = String(a.baseName || a.name || '').trim();
 nameCell.classList.add('monthly-sticky-col-2');
+tf_applyLatestRiskToElement(nameCell, a.baseName || a.name, a.pair || getPrimaryPairForAnalyst(a), true);
 tr.appendChild(nameCell);
 const pairCell = document.createElement('td');
 const pairText = (Array.isArray(a.pairs) && a.pairs.length)
@@ -5693,6 +5867,10 @@ if (signals != null) {
 const span = document.createElement('span');
 span.className = 'monthly-cell-line';
 span.textContent = signals + ' Signals';
+try {
+  const __riskState = tf_refreshLatestRiskState(false);
+  if (__riskState && monthKey === __riskState.monthKey) tf_applyLatestRiskToElement(span, analystName, a.pair || getPrimaryPairForAnalyst(a), true);
+} catch (e) { }
 lineElements.push(span);
 }
 if (pips != null && effectiveSlPips > 0 && dollarPerPip > 0) {
@@ -6385,6 +6563,7 @@ tr.appendChild(dateCell);
 const analystCell = tf_markHistoryCell(document.createElement('td'), 'analyst');
 analystCell.textContent = isWithdrawRow ? 'Withdraw' : formatAnalystDisplayName(row.analyst || '');
 analystCell.title = isWithdrawRow ? 'Withdraw' : String(row.analyst || '').trim();
+if (!isWithdrawRow) tf_applyLatestRiskToElement(analystCell, row.analyst || '', row.pair || '', true);
 tr.appendChild(analystCell);
 const balanceCompoundCell = tf_markHistoryCell(document.createElement('td'), 'balance');
 balanceCompoundCell.classList.add('text-right', 'mono');
@@ -6591,11 +6770,12 @@ let a=avgAgg.get(k); if(!a){a={sum:0,count:0};avgAgg.set(k,a);} a.sum+=ms;a.coun
 function renderSide(tbody,subset){
 tbody.innerHTML='';
 if(!subset.length){const tr=document.createElement('tr');tr.className='tf-holding-empty-row';const td=document.createElement('td');td.colSpan=3;td.textContent=names.length?'—':'Belum ada trade yang tampil di Table 3 untuk filter aktif.';tr.appendChild(td);tbody.appendChild(tr);return;}
-subset.forEach(name=>{const tr=document.createElement('tr');const n=document.createElement('td');n.className='tf-holding-analyst';n.textContent=name;const m=document.createElement('td');m.className='mono tf-holding-value';m.textContent=tf_formatHoldingDuration(maxBy.get(name));const a=document.createElement('td');a.className='mono tf-holding-value';const g=avgAgg.get(name);a.textContent=g&&g.count?tf_formatHoldingDuration(g.sum/g.count):'—';tr.append(n,m,a);tbody.appendChild(tr);});
+subset.forEach(name=>{const tr=document.createElement('tr');const n=document.createElement('td');n.className='tf-holding-analyst';n.textContent=name;try{const sep=name.lastIndexOf(' - ');if(sep>0)tf_applyLatestRiskToElement(n,name.slice(0,sep),name.slice(sep+3),true);}catch(e){}const m=document.createElement('td');m.className='mono tf-holding-value';m.textContent=tf_formatHoldingDuration(maxBy.get(name));const a=document.createElement('td');a.className='mono tf-holding-value';const g=avgAgg.get(name);a.textContent=g&&g.count?tf_formatHoldingDuration(g.sum/g.count):'—';tr.append(n,m,a);tbody.appendChild(tr);});
 }
 const splitAt=Math.ceil(names.length/2);renderSide(leftBody,names.slice(0,splitAt));renderSide(rightBody,names.slice(splitAt));
 }
 function recomputeHistoryRows() {
+try { tf_refreshLatestRiskState(true); } catch (e) { }
 const selectedAnalysts = null;
 const fixedLotCache = new Map();
 function getFixedLotCached(analystName, pair, dollarPerPip, riskPercent) {
@@ -11593,6 +11773,7 @@ ctrlCell.textContent = '▶';
 tr.appendChild(ctrlCell);
 const nameCell = document.createElement('td');
 nameCell.textContent = name;
+if (name !== 'Withdraw') tf_applyLatestRiskToElement(nameCell, name, null, true);
 tr.appendChild(nameCell);
 const maxProfitTradesCell = document.createElement('td');
 maxProfitTradesCell.className = 'mono tp';
@@ -11738,6 +11919,7 @@ createdDate: normalizeWIBSuffix(item.createdDate),
 createdSortKey: item.createdSortKey
 });
 }
+try { tf_refreshLatestRiskState(true); } catch (e) { }
 try {
 initialHistorySignals = historySignals.slice();
 }
@@ -14652,6 +14834,7 @@ a.setAttribute('data-analyst', name);
 a.setAttribute('href', TF_ISIGNAL_CHANNELS_URL);
 a.setAttribute('target', '_blank');
 a.setAttribute('rel', 'noopener noreferrer');
+tf_applyLatestRiskToElement(a, name, null, true);
 wrap.appendChild(badge);
 wrap.appendChild(a);
 tdName.appendChild(wrap);
@@ -14771,9 +14954,11 @@ const keys = ['tfHistorySignals', 'tfAnalystSources', 'tfNoDataPairs', 'tfAvgSlP
 const data = await tf_storageLocalGet(keys);
 try {
 historySignals = Array.isArray(data.tfHistorySignals) ? data.tfHistorySignals : [];
+try { tf_refreshLatestRiskState(true); } catch (e) { }
 }
 catch (e) {
 historySignals = [];
+try { tf_refreshLatestRiskState(true); } catch (x) { }
 }
 try {
 analystSourcesByName = (data.tfAnalystSources && typeof data.tfAnalystSources === 'object') ? data.tfAnalystSources : {};
@@ -14935,6 +15120,7 @@ setSpinner.setAttribute('data-analyst', String(entry.baseName || ''));
 setSpinner.setAttribute('data-platform-id', String(platformId));
 try {
 tf_isignalUsers_applyAnalystLink(analystLink, entry.baseName);
+tf_applyLatestRiskToElement(analystLink, entry.baseName, entry.pair, false);
 tf_isignalUsers_applySetBadge(setBadge, setSpinner, cfg, platformId, entry.baseName);
 }
 catch (e) { }
@@ -17397,6 +17583,13 @@ showError('');
       const detail = isOpen ? '<tr class="tf-score-expanded-row"><td colspan="3">' + detailTable(records) + '</td></tr>' : '';
       return summary + detail;
     }).join('');
+    try {
+      const scoreRows = body.querySelectorAll('tr.tf-score-summary-row');
+      analysts.forEach((entry, idx) => {
+        const cell = scoreRows[idx] ? scoreRows[idx].querySelector('.tf-score-analyst') : null;
+        if (cell) tf_applyLatestRiskToElement(cell, entry.name, null, true);
+      });
+    } catch (e) { }
   }
   function boot() {
     ensureSection();
