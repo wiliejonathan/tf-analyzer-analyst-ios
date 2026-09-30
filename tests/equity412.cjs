@@ -1,0 +1,21 @@
+const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const source=fs.readFileSync(process.env.TF_RISK_SOURCE||'assets/dashboard-mobile.js','utf8');
+const extract=(name,next)=>source.slice(source.indexOf('function '+name+'('),source.indexOf('\nfunction '+next+'(',source.indexOf('function '+name+'(')));
+function setup(){
+ const canvas={getContext:()=>({clearRect(){}}),width:400,height:200};
+ const c={document:{getElementById:id=>id==='equity-curve-canvas'?canvas:null},currentBalance:5000,equityMetric:'usd',equityChartMode:'line',equityCurvePoints:[],equityCompareCurvePoints:[],equityCompareRows:[],equityCompareCalcRows:[],tf_lastEquityCalcRows:[],equityFilterStart:null,equityFilterEnd:null,equityFilterMin:null,equityFilterMax:null,equityHoverIndex:null,tfTradeSingleMonthKey:'',equityDailyCandles:[],lastHistoryRows:[],equityCandleViewEnd:null,
+ tf_cancelEquityAnimation412(){},tf_renderBalanceCards412:(saldo,equity,busy)=>{c.cards={saldo,equity,busy}},tf_isMyfxbookPriceLoading:()=>false,tf_getPrimarySortKey:r=>r.sortKey,formatDateInputFromSortKey:k=>new Date(k).toISOString().slice(0,10),parseDateInputToSortKey:s=>Date.parse(s+'T00:00:00Z'),tf_syncHistoryDateInputsFromState(){},tf_isHistoryRowEnabled:()=>true,tf_applyStartTradeCreatedClosedRule:r=>r,tf_getHistoryNetPnlDollar:r=>r.pnlDollar,tf_getHistoryNetPnlPercent:r=>r.pnlPercent,tf_buildEquityDailyCandlesFromPoints:()=>[],tf_updateEquityCompareDataFromRows(){},tf_animateEquity412(){c.draws++},computeAndRenderEquityDrawdownSummary(){},tf_renderEquityCompareSummary(){},tf_markEquityCandleViewportForFullReset(){c.resets++},buildMonthlyTableSkeleton(){},updateMonthlyTableCells(){},renderSummaryTable(){},recomputeHistoryRows(){c.updateEquityCurveFromRows(c.rows)},draws:0,resets:0,rows:[]};
+ vm.createContext(c);vm.runInContext(extract('updateEquityCurveFromRows','applyEquityDateFilterFromInputs')+'\n'+extract('applyAnalystPairFilterAll','applyAnalystPairFilterStats'),c);return c;
+}
+const row=(date,analyst,pnl,balance)=>({sortKey:Date.parse(date+'T12:00:00Z'),analyst,pair:'XAUUSD',pnlDollar:pnl,pnlPips:pnl,balancePnl:balance,pnlPercent:pnl/50});
+test('untick all → A → A+B → B updates ALL dates and actual equity without timeframe toggle',()=>{
+ const c=setup(),a=[row('2026-08-01','A',100,5100)],b=[row('2026-09-01','B',-200,4800)];
+ for(const rows of [[],a,[...a,...b],b]){c.rows=rows;c.applyAnalystPairFilterAll();assert.equal(c.equityCurvePoints.length,rows.length?rows.length+1:0);if(rows.length)assert.equal(c.equityCurvePoints.at(-1).sortKey,rows.at(-1).sortKey);}
+ assert.equal(c.equityCurvePoints.at(-1).equity,4800);assert.equal(c.cards.equity,4800);assert.equal(c.resets,4);
+ c.rows=a;c.applyAnalystPairFilterAll();assert.equal(c.equityFilterEnd,a[0].sortKey);
+ c.rows=b;c.applyAnalystPairFilterAll();assert.equal(c.equityFilterEnd,b[0].sortKey);
+});
+test('empty selection clears points and cards instead of keeping previous analyst balance',()=>{const c=setup();c.rows=[row('2026-09-01','B',-200,4800)];c.applyAnalystPairFilterAll();c.rows=[];c.applyAnalystPairFilterAll();assert.equal(c.equityCurvePoints.length,0);assert.equal(c.tf_lastEquityCalcRows.length,0);assert.equal(c.cards.equity,null)});
+test('explicit equity date filter still applies until analyst selection changes',()=>{const c=setup();c.equityFilterStart=Date.parse('2026-09-01');c.equityFilterEnd=Date.parse('2026-09-30');c.updateEquityCurveFromRows([row('2026-08-01','A',100,5100),row('2026-09-01','B',-200,4900)]);assert.equal(c.equityCurvePoints.length,2);assert.equal(c.equityCurvePoints[1].analyst,'B')});
+const subscription=source.slice(source.indexOf('function tf_subscriptionStatus412('),source.indexOf('function tf_applySubscription412('));
+test('subscription uses precise WIB time and five-day / one-day boundaries',()=>{const c={};vm.createContext(c);vm.runInContext(subscription,c);const end=Date.parse('2026-10-06T15:09:00+07:00');for(const [days,state] of [[6,'healthy'],[5,'warning'],[1.1,'warning'],[1,'critical'],[0,'critical'],[-1,'critical']])assert.equal(c.tf_subscriptionStatus412('6 Oktober 2026, 15:09',end-days*86400000).state,state);assert.equal(c.tf_subscriptionStatus412('31 Februari 2026, 15:09'),null);assert.equal(c.tf_subscriptionStatus412('—'),null)});

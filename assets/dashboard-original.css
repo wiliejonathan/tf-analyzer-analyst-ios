@@ -436,3 +436,28 @@ body.tf-risk-explainer-open{overflow:hidden!important;}
 #tf-risk-explainer button:hover,#tf-risk-explainer button:focus-visible{background:rgba(56,189,248,.17);outline:2px solid rgba(56,189,248,.2);outline-offset:3px;}
 #tf-risk-explainer .tf-risk-explainer-footer{display:flex;justify-content:space-between;gap:12px;margin-top:22px;padding-top:14px;border-top:1px solid #1b2533;color:#64748b;font:8px/1.4 ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:1px;}
 @media(max-width:380px){#tf-risk-explainer .tf-risk-explainer-card{padding:22px;}#tf-risk-explainer h2{font-size:32px!important;}}
+/* REV412: responsive balance overview, matching dark dashboard palette. */
+.tf-balance-cards412{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:14px 0 18px}
+.tf-balance-card412{background:#101827;border:1px solid #283447;border-radius:12px;padding:14px 16px;min-width:0}
+.tf-balance-label412{font-size:12px;font-weight:600;color:#a4adbc;margin-bottom:8px}
+.tf-balance-value412{font-size:clamp(18px,2.2vw,26px);font-weight:700;color:#e6e9f2;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.tf-balance-card412.neg{background:rgba(127,29,29,.24);border-color:rgba(239,68,68,.42)}
+.tf-balance-card412.neg :is(.tf-balance-label412,.tf-balance-value412){color:#f87171}
+.tf-balance-card412.pos .tf-balance-value412{color:#22c55e}
+@media(max-width:560px){.tf-balance-cards412{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.tf-balance-card412{padding:12px}}
+.tf-isignal-subend.tf-subscription-healthy412{color:#22c55e!important}
+.tf-isignal-subend.tf-subscription-warning412{color:#facc15!important}
+.tf-isignal-subend.tf-subscription-critical412{color:#ef4444!important}
+.tf-subscription-icon412{display:inline-flex;align-items:center;justify-content:center;width:15px;font-weight:800;margin-right:3px}
+.tf-users-detail-wrap .tf-col-analyst,.tf-users-analyst-link{text-align:left!important}
+#tf-isignal-explainer412{position:fixed;inset:0;z-index:2147483646;background:rgba(2,6,23,.86);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:18px;box-sizing:border-box;color:#e2e8f0}
+.tf-isignal-explainer-card412{width:520px;max-width:100%;max-height:90vh;overflow:auto;background:#0b1322;border:1px solid #29364d;border-radius:18px;padding:26px;box-shadow:0 24px 70px #0008;box-sizing:border-box}
+.tf-isignal-eyebrow412{font-size:10px;letter-spacing:2px;color:#64748b;font-family:monospace}
+.tf-isignal-explainer-card412 h2{font-size:38px;line-height:1.05;margin:14px 0 18px;font-weight:800;background:linear-gradient(110deg,#67e8f9,#60a5fa,#a78bfa);background-clip:text;-webkit-background-clip:text;color:transparent}
+.tf-isignal-explainer-card412 p{font-size:12px;line-height:1.65;color:#a7b2c5;margin:8px 0}
+.tf-isignal-explainer-row412{display:flex;gap:14px;border-top:1px solid #1e293b;padding:12px 0}
+.tf-isignal-explainer-row412>span{width:24px;flex:0 0 24px;font-weight:800;font-size:22px;text-align:center}
+.tf-isignal-explainer-row412 strong{font-size:13px}
+.tf-legend-green412{color:#22c55e}.tf-legend-yellow412{color:#facc15}.tf-legend-red412{color:#ef4444}
+.tf-isignal-note412{font-size:12px;line-height:1.6;border:1px solid #924a39;background:#421c213d;color:#fecaca;border-radius:10px;padding:12px;margin:14px 0}
+#tf-isignal-understand412{width:100%;padding:12px;border:1px solid #6b85ac;border-radius:10px;background:#1d3555;color:#eef6ff;font-weight:700;cursor:pointer}
