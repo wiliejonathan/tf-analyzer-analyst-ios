@@ -29,10 +29,10 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           dash=Path('assets/dashboard-mobile.js').read_text(); idx=Path('index.html').read_text(); sw=Path('service-worker.js').read_text(); gate=Path('mobile-license-gate.js').read_text(); upd=Path('mobile-force-update.js').read_text()
-          assert 'REV386: exact source is the final trade rows rendered/exported by Table 3 after active filters.' in dash
-          assert 'function tf_renderHoldingPeriodTables(tableRows)' in dash
-          assert 'tf_renderHoldingPeriodTables(rowsForUi);' in dash
-          assert 'tf_holdingAllTickerRows' not in dash
+          assert 'REV386 FINAL: Holding duration uses Table 3 Created At/Closed At.' in dash
+          assert 'function tf_renderHoldingPeriodTables(allTickerRows, filteredRows)' in dash
+          assert 'const tf_holdingAllTickerRows = baseRows.slice();' in dash
+          assert 'tf_renderHoldingPeriodTables(tf_holdingAllTickerRows, rowsForUi);' in dash
           assert 'tf_parseHistoryTableDateMs(row.createdDate)' in dash and 'tf_parseHistoryTableDateMs(row.displayDate)' in dash
           assert '?rev=386' in idx and '?rev=386' in sw and '?rev=386' in gate
           assert "var CURRENT_TAG = 'v1.16.99';" in upd
@@ -53,7 +53,7 @@ jobs:
           set -euo pipefail
           source release-staging/REV386-mobile/release.env
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release edit "$TAG" --target "$GITHUB_SHA" --title "$TITLE" --notes-file release-staging/REV386-mobile/RELEASE_NOTES.md --latest
+            gh release edit "$TAG" --target "$GITHUB_SHA" --title "$TITLE" --notes-file release-staging/REV386-mobile/RELEASE_NOTES.md
             gh release upload "$TAG" "/tmp/$ASSET" "/tmp/$ASSET.sha256" --clobber
           else
             gh release create "$TAG" "/tmp/$ASSET" "/tmp/$ASSET.sha256" --target "$GITHUB_SHA" --title "$TITLE" --notes-file release-staging/REV386-mobile/RELEASE_NOTES.md --latest
