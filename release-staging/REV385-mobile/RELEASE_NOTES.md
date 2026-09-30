@@ -1,12 +1,13 @@
-# TF Analyzer Analyst iOS / Browser v1.16.98 — REV385
+# TF Analyzer Analyst V1.16.98 — REV385
 
-## Holding Period Table 3 source-of-truth fix
+## Holding Period Accuracy Fix
 
-- Holding = Table 3 Closed At − Table 3 Created At.
-- Visible WIB date labels are parsed first; numeric sort keys are fallback only.
-- Max and Avg use the exact final Table 3 trade rows after analyst/pair, Time Range, Time Range per Month, and Filter Tanggal.
-- Withdraw rows excluded.
-- REV384 alignment and Table 3 performance fix retained.
-- Website cache bumped to REV385.
+- Holding Period now uses the exact dates displayed in Table 3 as the source of truth.
+- Created At = `createdDate`; Closed At = `displayDate`.
+- `createdSortKey` / `sortKey` are fallback-only for legacy rows with missing display dates.
+- Max Holding Period uses all history for the currently selected Analyst-Pair set.
+- Avg Holding Period follows Time Range, Time Range per Month, and the active Table 3 date filters.
+- PC/mobile calculation logic is now aligned.
+- REV384 alignment, no-inner-scroll, Table 3 performance fix, import persistence, and Analyst-Pair filters are retained.
 
-Version: v1.16.98 / REV385
+Version: **v1.16.98 / REV385**
