@@ -107,8 +107,8 @@ jobs:
           assert "lookup(d.path||'/mobile/login'" in proxy
           assert "remoteRevision:'REV399'" in proxy
           assert 'REV399_ANDROID_WEB_RELAY' in proxy
-          assert '?rev=398' in idx
-          assert 'rev399-hard-inline-analyst-colors' in sw
+          assert '?rev=399' in idx
+          assert 'rev399-json-import-fix' in sw
           assert "var CURRENT_TAG = 'v1.17.12';" in upd
           assert 'function tf_forceLatestRiskTextColor' in dash
           assert "style.setProperty('color', color, 'important')" in dash
