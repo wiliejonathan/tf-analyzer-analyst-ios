@@ -11,6 +11,9 @@ const TF_MOBILE_IMPORT_EXPECTED_TRADES_KEY="tf_mobile_import_expected_trades_v8"
 const TF_MOBILE_IMPORT_EXPECTED_ANALYSTS_KEY="tf_mobile_import_expected_analysts_v8";
 const TF_MOBILE_IMPORT_EXPECTED_SUMMARY_ROWS_KEY="tf_mobile_import_expected_summary_rows_v8";
 const TF_MOBILE_IMPORT_EXPECTED_SCORE_KEY="tf_mobile_import_expected_score_v8";
+let tfMobileRecoverRenderPromiseV402=null;
+let tfMobileRecoverRenderLastV402=0;
+window.__TF_MOBILE_IMPORT_FAST_ACTIVE_V402=false;
 
 
 // REV294 APK-only: universal 2-step in-app Cancel confirmation + Android Back guard.
@@ -332,7 +335,7 @@ function tfMobileFinishImportLoadingWhenReady(){
       expectedTrades>0 ? historyRows>0 : (summaryRows>0 || expectedSummaryRows===0)
     );
 
-    if(elapsedMs>6000 && coreReady){
+    if(elapsedMs>1200 && coreReady){
       tfMobileUpdateImportLoading(
         "Data berhasil dimuat",
         pendingNames.length
@@ -343,7 +346,7 @@ function tfMobileFinishImportLoadingWhenReady(){
       return;
     }
 
-    if(elapsedMs>12000){
+    if(elapsedMs>3200){
       tfMobileUpdateImportLoading(
         "Data import sudah tersimpan",
         pendingNames.length
@@ -354,7 +357,7 @@ function tfMobileFinishImportLoadingWhenReady(){
       return;
     }
 
-    if(elapsedMs>4000){
+    if(elapsedMs>900){
       tfMobileUpdateImportLoading(
         "Menyiapkan tampilan…",
         pendingNames.length
@@ -363,7 +366,7 @@ function tfMobileFinishImportLoadingWhenReady(){
       );
     }
 
-    setTimeout(check,150);
+    setTimeout(check,90);
   };
 
   check();
@@ -641,47 +644,71 @@ async function tfMobileReadBackV31(){
   return storageGet(['tfHistorySignals','tfAnalystSources','tfMonthlyStats','tfScoreHistory']);
 }
 async function tfMobileRecoverRenderV31(reason){
+  const now=Date.now();
+  if(tfMobileRecoverRenderPromiseV402)return tfMobileRecoverRenderPromiseV402;
+  if(now-tfMobileRecoverRenderLastV402<500 && !String(reason||'').startsWith('import-'))return true;
+
+  tfMobileRecoverRenderPromiseV402=(async()=>{
+    try{
+      const data=await tfMobileReadBackV31();
+      const history=Array.isArray(data.tfHistorySignals)?data.tfHistorySignals:[];
+      const sources=data.tfAnalystSources&&typeof data.tfAnalystSources==='object'?data.tfAnalystSources:{};
+      if(!history.length&&!Object.keys(sources).length)return false;
+
+      try{
+        if(typeof selectedAnalystPairsMapStats!=='undefined')selectedAnalystPairsMapStats=null;
+        if(typeof selectedAnalystPairsMapHistory!=='undefined')selectedAnalystPairsMapHistory=null;
+        if(typeof selectedAnalystsGlobal!=='undefined')selectedAnalystsGlobal=null;
+      }catch(_){ }
+
+      if(typeof loadFromChromeStorageIfAvailable==='function'){
+        try{
+          const maybe=loadFromChromeStorageIfAvailable();
+          if(maybe&&typeof maybe.then==='function'){
+            await Promise.race([maybe,new Promise(r=>setTimeout(r,140))]);
+          }else{
+            await new Promise(r=>setTimeout(r,90));
+          }
+        }catch(_){
+          await new Promise(r=>setTimeout(r,90));
+        }
+      }
+
+      try{
+        if(typeof rebuildAnalystListFromSources==='function')rebuildAnalystListFromSources();
+        if(typeof setupAnalystTickerFilter==='function')setupAnalystTickerFilter();
+        if(typeof applyAnalystPairFilterAll==='function')applyAnalystPairFilterAll();
+        if(typeof recomputeHistoryRows==='function')recomputeHistoryRows();
+        if(typeof renderSummaryTable==='function')renderSummaryTable();
+        if(typeof window.tfRenderScoreHistory==='function')window.tfRenderScoreHistory();
+      }catch(e){console.warn('TF Mobile REV402 fast render recovery warning',reason,e);}
+
+      await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+      const historyRows=[...document.querySelectorAll('#history-table tbody tr:not(.tf-start-balance-row)')].filter(tr=>{
+        const txt=String(tr.textContent||'').trim();
+        return txt && !/belum ada|tidak ada data|no data/i.test(txt);
+      }).length;
+      const summaryRows=[...document.querySelectorAll('#summary-table tbody tr')].filter(tr=>{
+        const txt=String(tr.textContent||'').trim();
+        return txt && !/belum ada|tidak ada data|no data/i.test(txt);
+      }).length;
+      tfMobileRecoverRenderLastV402=Date.now();
+      return historyRows>0||summaryRows>0||history.length>0;
+    }catch(e){
+      console.warn('TF Mobile REV402 fast render recovery failed',reason,e);
+      return false;
+    }
+  })();
+
   try{
-    const data=await tfMobileReadBackV31();
-    const history=Array.isArray(data.tfHistorySignals)?data.tfHistorySignals:[];
-    const sources=data.tfAnalystSources&&typeof data.tfAnalystSources==='object'?data.tfAnalystSources:{};
-    if(!history.length&&!Object.keys(sources).length)return false;
-
-    // REV336: imported IndexedDB data is authoritative. Always push it back into
-    // the dashboard globals before deciding that the UI is already rendered.
-    try{
-      if(typeof selectedAnalystPairsMapStats!=='undefined')selectedAnalystPairsMapStats=null;
-      if(typeof selectedAnalystPairsMapHistory!=='undefined')selectedAnalystPairsMapHistory=null;
-      if(typeof selectedAnalystsGlobal!=='undefined')selectedAnalystsGlobal=null;
-    }catch(_){ }
-
-    if(typeof loadFromChromeStorageIfAvailable==='function')loadFromChromeStorageIfAvailable();
-    await new Promise(r=>setTimeout(r,280));
-
-    try{
-      if(typeof rebuildAnalystListFromSources==='function')rebuildAnalystListFromSources();
-      if(typeof setupAnalystTickerFilter==='function')setupAnalystTickerFilter();
-      if(typeof applyAnalystPairFilterAll==='function')applyAnalystPairFilterAll();
-      if(typeof recomputeHistoryRows==='function')recomputeHistoryRows();
-      if(typeof renderSummaryTable==='function')renderSummaryTable();
-      if(typeof window.tfRenderScoreHistory==='function')window.tfRenderScoreHistory();
-    }catch(e){console.warn('TF Mobile REV336 render recovery warning',reason,e);}
-
-    await new Promise(r=>setTimeout(r,120));
-    const historyRows=[...document.querySelectorAll('#history-table tbody tr:not(.tf-start-balance-row)')].filter(tr=>{
-      const txt=String(tr.textContent||'').trim();
-      return txt && !/belum ada|tidak ada data|no data/i.test(txt);
-    }).length;
-    const summaryRows=[...document.querySelectorAll('#summary-table tbody tr')].filter(tr=>{
-      const txt=String(tr.textContent||'').trim();
-      return txt && !/belum ada|tidak ada data|no data/i.test(txt);
-    }).length;
-    return historyRows>0||summaryRows>0||history.length>0;
-  }catch(e){console.warn('TF Mobile REV336 render recovery failed',reason,e);return false;}
+    return await tfMobileRecoverRenderPromiseV402;
+  }finally{
+    tfMobileRecoverRenderPromiseV402=null;
+  }
 }
 window.tfMobileRecoverRenderV31=tfMobileRecoverRenderV31;
 
-async function applyPayload(payload,fileNames){
+async function applyPayload(payload,fileNames,opts={}){
   if(!payload||typeof payload!=="object")throw new Error("Format file tidak valid.");
   const rawStorage=tfMobilePayloadStorageV399(payload);
   const hasOfficialPcEnvelope=!!(
@@ -704,7 +731,13 @@ async function applyPayload(payload,fileNames){
   };
   // REV336: do not suppress chrome.storage.onChanged. The IndexedDB shim writes
   // the entire payload in one transaction, then dashboard listeners can repaint.
-  await storageSet(st);
+  const fastImport=!!(opts&&opts.fastImport===true);
+  if(fastImport)window.__TF_MOBILE_SILENT_STORAGE_SET=true;
+  try{
+    await storageSet(st);
+  }finally{
+    if(fastImport)window.__TF_MOBILE_SILENT_STORAGE_SET=false;
+  }
 
   const verify=await tfMobileReadBackV31();
   const savedHistory=Array.isArray(verify.tfHistorySignals)?verify.tfHistorySignals:[];
@@ -729,6 +762,7 @@ async function importFiles(files,opts={}){
   if(!files.length)return;
   // REV399: a previous Cancel must never poison the next Import attempt.
   window.__tfRev293ImportCancelled=false;
+  window.__TF_MOBILE_IMPORT_FAST_ACTIVE_V402=true;
 
   const started=performance.now();
   const payloads=[];
@@ -821,7 +855,7 @@ async function importFiles(files,opts={}){
     }catch(e){}
 
     tfMobileUpdateImportLoading("Menyimpan data…",trades?`${trades.toLocaleString("id-ID")} trade sedang disiapkan.`:"Menyimpan data ke perangkat.");
-    await applyPayload(payload,fileNames);
+    await applyPayload(payload,fileNames,{fastImport:true});
 
     const elapsed=Math.max(0,(performance.now()-started)/1000);
     status(`Import selesai • ${trades.toLocaleString("id-ID")} trade • ${elapsed.toFixed(1)} dtk`,true);
@@ -832,13 +866,13 @@ async function importFiles(files,opts={}){
       sessionStorage.setItem(TF_MOBILE_IMPORT_LOADING_DETAIL_KEY,trades?`${trades.toLocaleString("id-ID")} trade sedang ditampilkan.`:"Menampilkan data hasil import.");
     }catch(e){}
 
-    // REV336 Web/iOS: render imported data in-place. A full location.reload() was
-    // causing the license gate to be revisited and could race IndexedDB hydration.
+    // REV402: one single-flight render pass. Previous versions could trigger the
+    // same heavy Table 1-4/equity render from import + storage.onChanged + boot timers.
     let rendered=false;
-    for(const waitMs of [0,180,420,900,1600]){
-      if(waitMs)await new Promise(r=>setTimeout(r,waitMs));
-      try{rendered=await tfMobileRecoverRenderV31('import-rev336-'+waitMs)||rendered;}catch(_){}
-      if(rendered)break;
+    try{rendered=await tfMobileRecoverRenderV31('import-rev402-fast');}catch(_){}
+    if(!rendered){
+      await new Promise(r=>setTimeout(r,90));
+      try{rendered=await tfMobileRecoverRenderV31('import-rev402-fallback');}catch(_){}
     }
     tfMobileUpdateImportLoading(
       rendered?'Data berhasil dimuat':'Data import tersimpan',
@@ -854,14 +888,16 @@ async function importFiles(files,opts={}){
       if(typeof window.tfMobileGoHome==='function') window.tfMobileGoHome();
       else document.querySelector('[data-mobile-nav="table1"]')?.click();
     }catch(_){}
-    setTimeout(tfMobileHideImportLoading,rendered?380:700);
+    window.__TF_MOBILE_IMPORT_FAST_ACTIVE_V402=false;
+    setTimeout(tfMobileHideImportLoading,rendered?80:180);
     return {ok:true,trades,analysts:expectedAnalysts,reload:false,rendered,activeNav:'table1'};
 
   }catch(e){
     const message=e&&e.message?String(e.message):"File tidak dapat diproses.";
     tfMobileUpdateImportLoading("Import gagal",message);
     status("Import gagal • "+message,false);
-    setTimeout(tfMobileHideImportLoading,1200);
+    window.__TF_MOBILE_IMPORT_FAST_ACTIVE_V402=false;
+    setTimeout(tfMobileHideImportLoading,500);
     throw e;
   }
 }
@@ -904,8 +940,18 @@ setTimeout(()=>clearInterval(timer),15000);
 
 // V31: imported storage is authoritative. If the original dashboard boots before
 // IndexedDB data has finished propagating, reload it from storage and force a render.
-[450,1200,2600,5200].forEach(ms=>setTimeout(()=>tfMobileRecoverRenderV31('boot-'+ms),ms));
-try{chrome.storage.onChanged.addListener((changes,area)=>{if(area==='local'&&changes&&(changes.tfHistorySignals||changes.tfAnalystSources))setTimeout(()=>tfMobileRecoverRenderV31('storage-change'),80);});}catch(_){ }
+[350,1400].forEach(ms=>setTimeout(()=>{
+  if(window.__TF_MOBILE_IMPORT_FAST_ACTIVE_V402)return;
+  void tfMobileRecoverRenderV31('boot-'+ms);
+},ms));
+try{
+  chrome.storage.onChanged.addListener((changes,area)=>{
+    if(window.__TF_MOBILE_IMPORT_FAST_ACTIVE_V402)return;
+    if(area==='local'&&changes&&(changes.tfHistorySignals||changes.tfAnalystSources)){
+      setTimeout(()=>{if(!window.__TF_MOBILE_IMPORT_FAST_ACTIVE_V402)void tfMobileRecoverRenderV31('storage-change');},120);
+    }
+  });
+}catch(_){ }
 
 })();
 
