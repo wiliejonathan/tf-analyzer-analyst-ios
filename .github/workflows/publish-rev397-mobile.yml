@@ -104,7 +104,7 @@ jobs:
           assert "lookup(d.path||'/mobile/login'" in proxy
           assert "remoteRevision:'REV397'" in proxy
           assert 'REV397_ANDROID_WEB_RELAY' in proxy
-          assert '?rev=396' in idx
+          assert '?rev=397' in idx
           assert 'rev397-all-analyst-colors' in sw
           assert "var CURRENT_TAG = 'v1.17.10';" in upd
           print('REV397 mobile all-analyst-color QA PASS')
