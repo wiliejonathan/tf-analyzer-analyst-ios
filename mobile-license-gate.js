@@ -4,15 +4,16 @@
   const API_BASE = 'https://tf-license-device-api.wiliejonathan1999.workers.dev';
   const LICENSE_ENDPOINT_POINTER_URL = 'https://raw.githubusercontent.com/wiliejonathan/tf-analyzer-admin/main/license-endpoint.json';
   const LICENSE_DIRECT_FALLBACK_URL = 'https://script.google.com/macros/s/AKfycbzUbx40vGvuCS4hQEOdfs-DeSU_TY-9zWXXPZzOKn3D9h0m5pQQYD6GGNCefufvsrv2eA/exec';
+  const LICENSE_ANDROID_RELAY_URL = 'https://wiliejonathan.github.io/tf-analyzer-analyst-ios/activation-proxy.html?rev=391';
   const LICENSE_WATCH_MS = 60000;
   // Keep the REV351 key so users who already activated on v1.16.67 migrate automatically.
   const AUTH_KEY = 'tfMobileRememberedLicenseV351';
   const APP_SCRIPTS = [
-    'mobile-chrome-shim.js?rev=390',
-    'assets/dashboard-mobile.js?rev=390',
-    'mobile-data-bridge.js?rev=390',
-    'mobile-app-shell.js?rev=390',
-    'mobile-remote.js?rev=390'
+    'mobile-chrome-shim.js?rev=391',
+    'assets/dashboard-mobile.js?rev=391',
+    'mobile-data-bridge.js?rev=391',
+    'mobile-app-shell.js?rev=391',
+    'mobile-remote.js?rev=391'
   ];
 
   let appStarted = false;
@@ -114,7 +115,7 @@
           licenseId: String(body && (body.licenseId || body.license) || '').trim(),
           deviceType: 'MOBILE',
           clientType: 'MOBILE',
-          source: 'REV390_DIRECT_LICENSE_FALLBACK'
+          source: 'REV391_DIRECT_LICENSE_FALLBACK'
         })
       });
       const text = await response.text();
@@ -147,6 +148,68 @@
     }
   }
 
+  function isAndroidClient() {
+    try { return /Android/i.test(navigator.userAgent || ''); } catch (_) { return false; }
+  }
+
+  async function androidRelayLicenseLookup(body, timeoutMs = 30000) {
+    return await new Promise((resolve, reject) => {
+      const id = 'tf-relay-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+      const iframe = document.createElement('iframe');
+      iframe.style.cssText = 'position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;left:-9999px;top:-9999px;border:0';
+      iframe.src = LICENSE_ANDROID_RELAY_URL + '&t=' + Date.now();
+      let done = false;
+      const finish = (fn, value) => {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        window.removeEventListener('message', onMessage);
+        try { iframe.remove(); } catch (_) {}
+        fn(value);
+      };
+      const onMessage = (ev) => {
+        const d = ev && ev.data || {};
+        if (ev.source !== iframe.contentWindow) return;
+        if (d.type === 'TF_LICENSE_RELAY_READY') {
+          try {
+            iframe.contentWindow.postMessage({
+              type: 'TF_LICENSE_RELAY_LOOKUP',
+              id,
+              body: {
+                email: cleanEmail(body && body.email),
+                token: normalizeToken(body && body.token),
+                licenseId: String(body && (body.licenseId || body.license) || '').trim()
+              }
+            }, '*');
+          } catch (e) { finish(reject, e); }
+          return;
+        }
+        if (d.type !== 'TF_LICENSE_RELAY_RESULT' || d.id !== id) return;
+        if (d.error) {
+          const e = new Error(String(d.error.message || 'Android activation relay gagal.'));
+          e.name = String(d.error.name || 'Error');
+          finish(reject, e);
+          return;
+        }
+        finish(resolve, d.result || { ok:true, valid:false, code:'LICENSE_NOT_FOUND', message:'Email atau token tidak ditemukan.' });
+      };
+      window.addEventListener('message', onMessage);
+      const timer = setTimeout(() => {
+        const e = new Error('Android activation relay timeout.');
+        e.name = 'AbortError';
+        finish(reject, e);
+      }, Math.max(10000, timeoutMs || 30000));
+      try { document.documentElement.appendChild(iframe); } catch (e) { finish(reject, e); }
+    });
+  }
+
+  async function licenseFallbackLookup(body, timeoutMs = 30000) {
+    if (isAndroidClient()) {
+      try { return await androidRelayLicenseLookup(body, timeoutMs); } catch (_) {}
+    }
+    return await licenseFallbackLookup(body, Math.max(timeoutMs, 30000));
+  }
+
   async function api(path, body, timeoutMs = 15000) {
     const controller = typeof AbortController === 'function' ? new AbortController() : null;
     const timeout = setTimeout(() => {
@@ -165,8 +228,8 @@
           deviceType: 'MOBILE',
           clientType: 'MOBILE',
           mobilePlatform: platformName(),
-          mobileVersion: '1.17.03',
-          remoteRevision: 'REV390',
+          mobileVersion: '1.17.04',
+          remoteRevision: 'REV391',
           requestNonce: String(Date.now()) + '-' + Math.random().toString(36).slice(2)
         })
       });
@@ -176,20 +239,20 @@
       try { result = JSON.parse(text); }
       catch (_) {
         if (isLicenseFallbackPath(path)) {
-          return await directLicenseLookup(body, Math.max(timeoutMs, 25000));
+          return await licenseFallbackLookup(body, Math.max(timeoutMs, 30000));
         }
         throw new Error('Respons server bukan JSON.');
       }
 
       if (isLicenseFallbackPath(path) && shouldUseDirectLicenseFallback(result, response.status)) {
-        return await directLicenseLookup(body, Math.max(timeoutMs, 25000));
+        return await licenseFallbackLookup(body, Math.max(timeoutMs, 30000));
       }
 
       if (!response.ok && !result.message) result.message = 'HTTP ' + response.status;
       return result;
     } catch (error) {
       if (isLicenseFallbackPath(path) && error && (error.name === 'AbortError' || error.name === 'TypeError')) {
-        return await directLicenseLookup(body, Math.max(timeoutMs, 25000));
+        return await licenseFallbackLookup(body, Math.max(timeoutMs, 30000));
       }
       throw error;
     } finally {
