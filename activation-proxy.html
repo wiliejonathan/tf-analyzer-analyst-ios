@@ -1,0 +1,51 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>TF License Relay</title></head>
+<body>
+<script>
+(() => {
+  'use strict';
+  const API_BASE='https://tf-license-device-api.wiliejonathan1999.workers.dev';
+  const POINTER='https://raw.githubusercontent.com/wiliejonathan/tf-analyzer-admin/main/license-endpoint.json';
+  const FALLBACK='https://script.google.com/macros/s/AKfycbzUbx40vGvuCS4hQEOdfs-DeSU_TY-9zWXXPZzOKn3D9h0m5pQQYD6GGNCefufvsrv2eA/exec';
+  function clean(v){return String(v||'').replace(/[\u200B-\u200D\u2060\uFEFF\u202A-\u202E\u2066-\u2069]/g,'').replace(/\s+/g,'').trim();}
+  async function direct(body,timeoutMs){
+    let url=FALLBACK;
+    try{
+      const r=await fetch(POINTER+'?t='+Date.now(),{cache:'no-store',redirect:'follow'});
+      if(r.ok){const j=await r.json();if(/^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/i.test(String(j&&j.apiUrl||'')))url=String(j.apiUrl);}
+    }catch(_){}
+    const ctrl=new AbortController(); const timer=setTimeout(()=>ctrl.abort(),Math.max(8000,timeoutMs||25000));
+    try{
+      const r=await fetch(url,{method:'POST',cache:'no-store',redirect:'follow',signal:ctrl.signal,headers:{'Content-Type':'text/plain;charset=UTF-8','Accept':'application/json,text/plain;q=0.9,*/*;q=0.1'},body:JSON.stringify({action:'lookup',email:clean(body.email),token:clean(body.token),licenseId:String(body.licenseId||body.license||'').trim(),deviceType:'MOBILE',clientType:'MOBILE',source:'REV391_ANDROID_WEB_RELAY'})});
+      const t=await r.text(); let j; try{j=JSON.parse(t);}catch(_){throw new Error('Respons relay lisensi bukan JSON.');}
+      if(!r.ok){const e=new Error(String(j&&j.message||('Apps Script HTTP '+r.status)));e.code=String(j&&j.code||'RELAY_APPS_SCRIPT_HTTP_ERROR');throw e;}
+      if(j&&j.valid===true)return {...j,ok:true,valid:true,sessionValid:true,portableSession:true,tokenGate:true,noDeviceLimit:true,mobileApprovalRequired:false,fallbackTransport:'GITHUB_PAGES_ANDROID_RELAY',code:'MOBILE_TOKEN_LOGIN_OK_RELAY'};
+      return j||{ok:true,valid:false,code:'LICENSE_NOT_FOUND',message:'Email atau token tidak ditemukan.'};
+    }finally{clearTimeout(timer);}
+  }
+  function needsFallback(j,status){
+    const c=String(j&&(j.code||j.error)||'').toUpperCase();
+    return ['APPS_SCRIPT_HTTP_ERROR','APPS_SCRIPT_TIMEOUT','APPS_SCRIPT_NETWORK_ERROR','APPS_SCRIPT_INVALID_RESPONSE','APPS_SCRIPT_ERROR'].includes(c)||Number(status||0)>=500;
+  }
+  async function lookup(body){
+    const ctrl=new AbortController(); const timer=setTimeout(()=>ctrl.abort(),12000);
+    try{
+      const r=await fetch(API_BASE+'/mobile/login',{method:'POST',cache:'no-store',redirect:'follow',signal:ctrl.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({...body,deviceType:'MOBILE',clientType:'MOBILE',mobilePlatform:'Android • TF Analyzer Relay',mobileVersion:'1.17.04',remoteRevision:'REV391',requestNonce:String(Date.now())+'-'+Math.random().toString(36).slice(2)})});
+      const t=await r.text(); let j; try{j=JSON.parse(t);}catch(_){return await direct(body,25000);}
+      if(needsFallback(j,r.status))return await direct(body,25000);
+      return j;
+    }catch(e){
+      if(e&&(e.name==='AbortError'||e.name==='TypeError'))return await direct(body,25000);
+      throw e;
+    }finally{clearTimeout(timer);}
+  }
+  window.addEventListener('message',async ev=>{
+    const d=ev.data||{}; if(d.type!=='TF_LICENSE_RELAY_LOOKUP'||!d.id)return;
+    try{const result=await lookup(d.body||{}); ev.source&&ev.source.postMessage({type:'TF_LICENSE_RELAY_RESULT',id:d.id,result},'*');}
+    catch(e){ev.source&&ev.source.postMessage({type:'TF_LICENSE_RELAY_RESULT',id:d.id,error:{name:e&&e.name||'Error',message:e&&e.message||String(e)}},'*');}
+  });
+  try{parent&&parent.postMessage({type:'TF_LICENSE_RELAY_READY'},'*');}catch(_){}
+})();
+</script>
+</body></html>
