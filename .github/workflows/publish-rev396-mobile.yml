@@ -46,9 +46,8 @@ jobs:
           assert 'tf_applyLatestRiskToElement(analystLink, entry.baseName, null, false);' in dash
           assert 'function tf_applyLatestRiskPairIconOnly' in dash
           assert "tf_applyLatestRiskToElement(nameCell, a.baseName || a.name, null, false);" in dash
-          assert "tf_applyLatestRiskToElement(analystCell, row.analyst || '', null, false);" in dash
-          assert "tf_applyLatestRiskPairIconOnly(analystCell, row.analyst || '', row.pair || '', 'left');" in dash
-          assert "tf_applyLatestRiskToElement(n,name.slice(0,sep),null,false);" in dash
+          assert "tf_applyLatestRiskToElement(analystCell, row.analyst || '', row.pair || '', true, 'left');" in dash
+                    assert "tf_applyLatestRiskToElement(n,name.slice(0,sep),name.slice(sep+3),true,'left');" in dash
           assert "tf_applyLatestRiskToElement(analystLink, entry.baseName, null, false);" in dash
           assert "tf_applyLatestRiskToElement(nameSpan, name, null, false);" in dash
           assert "icon.textContent = st.severity >= 2 ? '×' : (st.severity === 1 ? '!' : '✓');" in dash
@@ -58,7 +57,7 @@ jobs:
           assert '.tf-latest-risk-critical' in css
           assert "tf_getLatestRiskState(analyst, pair) || tf_getLatestRiskState(analyst, null)" in dash
           assert "if(days>0)parts.push(pad2(days)+'d');" in dash
-          assert "if(hours>0||days>0)parts.push(pad2(hours)+'h');" in dash
+          assert "parts.push(pad2(hours)+'h');" in dash
           assert "parts.push(pad2(minutes)+'m');" in dash
           assert "tr.classList.add(__pnlPctForRow >= 0 ? 'tf-history-row-pnl-positive' : 'tf-history-row-pnl-negative');" in dash
           assert 'tf-history-row-pnl-positive' in css
@@ -71,12 +70,21 @@ jobs:
           assert "tf_applyLatestRiskToElement(nameSpan, it.name, null, true, 'left');" in dash
           assert "tf_applyLatestRiskToElement(nameCell, a.baseName || a.name, null, false);" in dash
           assert "tf_applyLatestRiskToElement(span, analystName, a.pair || getPrimaryPairForAnalyst(a), true, 'left');" in dash
-          assert "tf_applyLatestRiskToElement(analystCell, row.analyst || '', null, false);" in dash
+          assert "tf_applyLatestRiskToElement(analystCell, row.analyst || '', row.pair || '', true, 'left');" in dash
           assert "tf_applyLatestRiskToElement(a, name, null, true, 'left');" in dash
           assert "tf_applyLatestRiskToElement(nameSpan, name, null, false);" in dash
           assert "width:10px;" in css and "height:10px;" in css
           assert ".tf-latest-risk-icon-left" in css
           assert ".tf-risk-name-left" in css
+          assert "tf_applyLatestRiskToElement(nameCell, baseName, rowPair, true, 'left');" in dash
+          assert 'tf_table1WarnedAnalysts' not in dash
+          assert "nameCell.removeAttribute('title');" in dash
+          assert "display:inline-flex;" in css
+          assert "vertical-align:middle;" in css
+          assert "top:-0.5px;" in css
+          assert "line-height:10px;" in css
+          assert '#history-table tbody tr.tf-history-row-pnl-positive > td:not([data-history-col="analyst"]) *' in css
+          assert '#history-table tbody tr.tf-history-row-pnl-negative > td:not([data-history-col="analyst"]) *' in css
           assert 'LICENSE_ANDROID_RELAY_URL' in gate
           assert 'REV392: Android WebView' in gate
           assert "path: isLicenseFallbackPath(path) ? path : '/mobile/login'" in gate
