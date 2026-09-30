@@ -210,6 +210,13 @@ html:not([data-tf-server-authorized="1"])body{overflow:hidden!important;backgrou
   margin-left:4px;
   margin-right:0;
 }
+.tf-latest-risk-icon-healthy{
+  background:#22c55e;
+  border:1px solid #4ade80;
+  color:#fff;
+  font-size:7px;
+  box-shadow:0 0 0 1px rgba(34,197,94,.16);
+}
 .tf-latest-risk-icon-warning{
   background:#facc15;
   border:1px solid #fde047;
