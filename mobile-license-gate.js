@@ -235,6 +235,11 @@
   }
 
   async function apiTransport(path, body, timeoutMs = 40000) {
+    let fallbackPromise = null;
+    const fallback = () => {
+      if (!fallbackPromise) fallbackPromise = licenseFallbackLookup(body, 30000, path);
+      return fallbackPromise;
+    };
     const controller = typeof AbortController === 'function' ? new AbortController() : null;
     const timeout = setTimeout(() => {
       try { controller && controller.abort(); } catch (_) {}
@@ -263,7 +268,7 @@
       try { result = JSON.parse(text); }
       catch (_) {
         if (isLicenseFallbackPath(path)) {
-          return await licenseFallbackLookup(body, 30000, path);
+          return await fallback();
         }
         throw new Error('Respons server bukan JSON.');
       }
@@ -273,18 +278,18 @@
       // GitHub Pages relay + public license lookup before treating it as denial.
       if (isLicenseFallbackPath(path) && isAndroidClient() &&
           !(result && result.valid === true && result.sessionValid !== false)) {
-        return await licenseFallbackLookup(body, 30000, path);
+        return await fallback();
       }
 
       if (isLicenseFallbackPath(path) && shouldUseDirectLicenseFallback(result, response.status)) {
-        return await licenseFallbackLookup(body, 30000, path);
+        return await fallback();
       }
 
       if (!response.ok && !result.message) result.message = 'HTTP ' + response.status;
       return result;
     } catch (error) {
       if (isLicenseFallbackPath(path) && error && (error.name === 'AbortError' || error.name === 'TypeError')) {
-        return await licenseFallbackLookup(body, 30000, path);
+        return await fallback();
       }
       throw error;
     } finally {
