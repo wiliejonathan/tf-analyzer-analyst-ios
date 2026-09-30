@@ -15023,6 +15023,8 @@ try {
 window.__tfIsUsersAnalystMetaCache = __tfIsUsersAnalystMetaCache;
 }
 catch (e) { }
+// REV393: active iSignal analyst table may have rendered before history was loaded.
+try { tf_isignalUsers_renderIsignalAnalystTables(null); } catch (e) { }
 return __tfIsUsersAnalystMetaCache;
 }
 function tf_isignalUsers_buildChildRowHtml(platformId) {
