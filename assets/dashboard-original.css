@@ -358,3 +358,27 @@ html:not([data-tf-server-authorized="1"])body{overflow:hidden!important;backgrou
 .tf-latest-risk-critical :not(.tf-latest-risk-icon){
   color:#ef4444 !important;
 }
+
+
+/* REV399 — dedicated analyst-name target.
+   Direct span styling prevents sticky/table cell rules from restoring white. */
+.tf-analyst-name-color-target{
+  color:inherit !important;
+  -webkit-text-fill-color:currentColor !important;
+  font:inherit;
+}
+.tf-latest-risk-healthy > .tf-analyst-name-color-target,
+.tf-latest-risk-healthy .tf-analyst-name-color-target{
+  color:#22c55e !important;
+  -webkit-text-fill-color:#22c55e !important;
+}
+.tf-latest-risk-warning > .tf-analyst-name-color-target,
+.tf-latest-risk-warning .tf-analyst-name-color-target{
+  color:#facc15 !important;
+  -webkit-text-fill-color:#facc15 !important;
+}
+.tf-latest-risk-critical > .tf-analyst-name-color-target,
+.tf-latest-risk-critical .tf-analyst-name-color-target{
+  color:#ef4444 !important;
+  -webkit-text-fill-color:#ef4444 !important;
+}
