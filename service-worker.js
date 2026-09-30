@@ -1,23 +1,23 @@
-const CACHE='tf-analyzer-analyst-mobile-rev393-latest-risk-warnings';
+const CACHE='tf-analyzer-analyst-mobile-rev394-risk-icon-layout';
 const ASSETS=[
-  './assets/dashboard-mobile.js?rev=393',
-  './assets/dashboard-original.css?rev=393',
+  './assets/dashboard-mobile.js?rev=394',
+  './assets/dashboard-original.css?rev=394',
   './icon32.png',
   './icons/icon-180.png',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './index.html',
   './manifest.webmanifest',
-  './mobile-app-shell.js?rev=393',
-  './mobile-remote.js?rev=393',
-  './mobile-chrome-shim.js?rev=393',
-  './mobile-data-bridge.js?rev=393',
-  './mobile-force-update.js?rev=393',
-  './mobile-license-gate.js?rev=393',
-  './activation-proxy.html?rev=393',
-  './mobile-remote-dashboard-home-hotfix.js?rev=393',
-  './mobile-import-fix-v30.js?rev=393',
-  './mobile-overrides.css?rev=393'
+  './mobile-app-shell.js?rev=394',
+  './mobile-remote.js?rev=394',
+  './mobile-chrome-shim.js?rev=394',
+  './mobile-data-bridge.js?rev=394',
+  './mobile-force-update.js?rev=394',
+  './mobile-license-gate.js?rev=394',
+  './activation-proxy.html?rev=394',
+  './mobile-remote-dashboard-home-hotfix.js?rev=394',
+  './mobile-import-fix-v30.js?rev=394',
+  './mobile-overrides.css?rev=394'
 ];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
