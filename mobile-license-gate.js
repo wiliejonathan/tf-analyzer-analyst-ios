@@ -16,7 +16,7 @@
     'mobile-remote.js?rev=404'
   ];
 
-  // REV404: one transport request per credential/path, shared by boot/watch.
+  // REV405: one transport request per credential/path, shared by boot/watch.
   const licenseRequests = new Map();
   let rememberedRefreshPromise = null;
   let lastLicenseSuccessAt = 0;
@@ -257,8 +257,8 @@
           deviceType: 'MOBILE',
           clientType: 'MOBILE',
           mobilePlatform: platformName(),
-          mobileVersion: '1.17.17',
-          remoteRevision: 'REV404',
+          mobileVersion: '1.17.18',
+          remoteRevision: 'REV405',
           requestNonce: String(Date.now()) + '-' + Math.random().toString(36).slice(2)
         })
       });

@@ -1,4 +1,4 @@
-const CACHE='tf-analyzer-analyst-mobile-rev404-activation-recovery';
+const CACHE='tf-analyzer-analyst-mobile-rev405-latest-month-risk';
 const ASSETS=[
   './assets/dashboard-mobile.js?rev=404',
   './assets/dashboard-original.css?rev=404',

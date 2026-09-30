@@ -1,0 +1,10 @@
+const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const path=process.env.TF_RISK_SOURCE||'assets/dashboard-mobile.js';let code=fs.readFileSync(path,'utf8');code=code.slice(code.indexOf('let __tfLatestRiskState'),code.indexOf('function tf_latestRiskReason'));
+function setup(entries){const ctx={window:{},historySignals:entries.map(([date,pips,analyst='A',pair='XAUUSD'])=>({sortKey:Date.parse(date+'T12:00:00Z'),pips,analyst,pair}))};vm.createContext(ctx);vm.runInContext(code,ctx);return ctx;}
+test('historical maximum events stay healthy after smaller latest-month loss',()=>{const c=setup([['2025-06-01',-100],['2025-06-02',-100],['2025-06-03',400],['2026-09-01',-10],['2026-09-02',-10]]);assert.equal(c.tf_getLatestRiskState('A').severity,0);});
+test('both latest maximum events are red',()=>{const c=setup([['2026-09-01',-100],['2026-09-02',-100]]);assert.equal(c.tf_getLatestRiskState('A').severity,2);});
+test('drawdown alone is yellow',()=>{const c=setup([['2026-09-01',-100]]);assert.equal(c.tf_getLatestRiskState('A').severity,1);});
+test('loss streak alone is yellow after recovery',()=>{const c=setup([['2025-06-01',-1000],['2025-06-02',2000],['2026-09-01',-10],['2026-09-02',-10],['2026-09-03',100]]);const s=c.tf_getLatestRiskState('A');assert.equal(s.drawdown,false);assert.equal(s.consecutiveLoss,true);assert.equal(s.severity,1);});
+test('month-crossing maximum streak is retained',()=>{const c=setup([['2026-08-31',-100],['2026-09-01',-100]]);assert.equal(c.tf_getLatestRiskState('A').severity,2);});
+test('same-length data edits invalidate status',()=>{const c=setup([['2026-09-01',-100],['2026-09-02',-100]]);assert.equal(c.tf_getLatestRiskState('A').severity,2);c.historySignals.forEach(r=>r.pips=100);assert.equal(c.tf_getLatestRiskState('A').severity,0);});
+test('analyst combines latest flags across pairs',()=>{const c=setup([['2026-09-01',-100,'A','EURUSD'],['2025-06-01',-1000,'A','USDJPY'],['2025-06-02',2000,'A','USDJPY'],['2026-09-01',-10,'A','USDJPY'],['2026-09-02',-10,'A','USDJPY'],['2026-09-03',100,'A','USDJPY']]);assert.equal(c.tf_getLatestRiskState('A').severity,2);});

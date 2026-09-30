@@ -4450,15 +4450,18 @@ function tf_refreshLatestRiskState(force) {
 try {
 const src = Array.isArray(historySignals) ? historySignals : [];
 let maxTs = null;
+let fingerprint=2166136261;
 for (let i = 0; i < src.length; i++) {
 const r = src[i];
 if (!r || r.isWithdraw || !String(r.analyst || '').trim() || !String(r.pair || '').trim()) continue;
+const value=JSON.stringify([r.analyst,r.pair,r.pips,r.sortKey,r.displayDate,r.closedDate,r.createdDate]);
+for(let j=0;j<value.length;j++) fingerprint=Math.imul(fingerprint^value.charCodeAt(j),16777619);
 const ts = tf_latestRiskRowTs(r);
 if (ts == null) continue;
 if (maxTs == null || ts > maxTs) maxTs = ts;
 }
 const latestMonth = maxTs == null ? '' : tf_latestRiskMonthKey(maxTs);
-const signature = String(src.length) + '|' + String(maxTs || 0) + '|' + latestMonth;
+const signature = String(src.length) + '|' + String(maxTs || 0) + '|' + latestMonth + '|' + fingerprint;
 if (!force && __tfLatestRiskState && __tfLatestRiskState.signature === signature) return __tfLatestRiskState;
 const byPair = new Map();
 const groups = new Map();
@@ -4470,7 +4473,7 @@ const analyst = String(r.analyst || '').trim();
 const pair = tf_latestRiskNormPair(r.pair);
 if (!analyst || !pair) continue;
 const ts = tf_latestRiskRowTs(r);
-if (ts == null || tf_latestRiskMonthKey(ts) !== latestMonth) continue;
+if (ts == null) continue;
 let pips = (typeof r.pips === 'number') ? r.pips : parseFloat(r.pips);
 if (!Number.isFinite(pips)) continue;
 const key = tf_latestRiskNormAnalyst(analyst) + '|' + pair;
@@ -4480,42 +4483,43 @@ groups.get(key).rows.push({ ts, pips });
 }
 groups.forEach((g, key) => {
 g.rows.sort((a,b) => a.ts - b.ts);
-let cumulative = 0;
-let peak = 0;
-let currentLossStreak = 0;
-let maxLossStreak = 0;
-for (let i = 0; i < g.rows.length; i++) {
-const pips = Number(g.rows[i].pips) || 0;
-cumulative += pips;
-if (cumulative > peak) peak = cumulative;
-if (pips < 0) {
-currentLossStreak += 1;
-if (currentLossStreak > maxLossStreak) maxLossStreak = currentLossStreak;
-} else {
-currentLossStreak = 0;
+// REV405: locate historical maximum events before checking their month.
+let cumulative=0, peak=0, peakTs=g.rows[0].ts, maxDd=0;
+let ddPeriods=[], lossPeriods=[], currentLossStreak=0, maxLossStreak=0, lossStart=0, lossSum=0, bestLossSum=0;
+for (let i=0;i<g.rows.length;i++) {
+const {ts,pips}=g.rows[i];
+cumulative+=pips;
+if(cumulative>peak){peak=cumulative;peakTs=ts;}
+const dd=peak-cumulative;
+if(dd>maxDd+1e-9){maxDd=dd;ddPeriods=[{start:peakTs,end:ts}];}
+else if(dd>1e-9 && Math.abs(dd-maxDd)<=1e-9){ddPeriods.push({start:peakTs,end:ts});}
+if(pips<0){
+if(!currentLossStreak){lossStart=ts;lossSum=0;}
+lossSum+=Math.abs(pips);
+currentLossStreak++;
+}else{
+if(currentLossStreak>maxLossStreak || (currentLossStreak===maxLossStreak && lossSum>bestLossSum+1e-9)){maxLossStreak=currentLossStreak;bestLossSum=lossSum;lossPeriods=[{start:lossStart,end:g.rows[i-1].ts}];}
+else if(currentLossStreak && currentLossStreak===maxLossStreak && Math.abs(lossSum-bestLossSum)<=1e-9){lossPeriods.push({start:lossStart,end:g.rows[i-1].ts});}
+currentLossStreak=0;
 }
 }
-const drawdown = cumulative < (peak - 1e-9);
-const consecutiveLoss = maxLossStreak >= 2;
-const severity = (drawdown && consecutiveLoss) ? 2 : ((drawdown || consecutiveLoss) ? 1 : 0);
-byPair.set(key, {
-analyst:g.analyst, pair:g.pair, monthKey:latestMonth,
-drawdown, consecutiveLoss, maxLossStreak,
-endingPips:cumulative, peakPips:peak, severity
-});
+if(currentLossStreak>maxLossStreak || (currentLossStreak===maxLossStreak && lossSum>bestLossSum+1e-9)){maxLossStreak=currentLossStreak;bestLossSum=lossSum;lossPeriods=[{start:lossStart,end:g.rows[g.rows.length-1].ts}];}
+else if(currentLossStreak && currentLossStreak===maxLossStreak && Math.abs(lossSum-bestLossSum)<=1e-9){lossPeriods.push({start:lossStart,end:g.rows[g.rows.length-1].ts});}
+const inLatestMonth=(period)=>tf_latestRiskMonthKey(period.start)<=latestMonth && tf_latestRiskMonthKey(period.end)>=latestMonth;
+const drawdown=maxDd>1e-9 && ddPeriods.some(inLatestMonth);
+const consecutiveLoss=maxLossStreak>=2 && lossPeriods.some(inLatestMonth);
+const severity=(drawdown&&consecutiveLoss)?2:((drawdown||consecutiveLoss)?1:0);
+byPair.set(key, {analyst:g.analyst,pair:g.pair,monthKey:latestMonth,drawdown,consecutiveLoss,maxLossStreak,maxDrawdownPips:maxDd,ddPeriods,lossPeriods,endingPips:cumulative,peakPips:peak,severity});
+
 });
 const byAnalyst = new Map();
 byPair.forEach((st) => {
 if (!st) return;
 const key = tf_latestRiskNormAnalyst(st.analyst);
-const prev = byAnalyst.get(key);
-if (!prev || st.severity > prev.severity) {
-byAnalyst.set(key, {
-analyst:st.analyst, monthKey:latestMonth,
-drawdown:!!st.drawdown, consecutiveLoss:!!st.consecutiveLoss,
-severity:st.severity, sourcePair:st.pair
-});
-}
+const prev=byAnalyst.get(key);
+const drawdown=!!st.drawdown || !!(prev && prev.drawdown);
+const consecutiveLoss=!!st.consecutiveLoss || !!(prev && prev.consecutiveLoss);
+byAnalyst.set(key,{analyst:st.analyst,monthKey:latestMonth,drawdown,consecutiveLoss,severity:drawdown&&consecutiveLoss?2:(drawdown||consecutiveLoss?1:0),sourcePair:st.pair});
 });
 // REV397: register EVERY analyst known by history, ANALYSTS, sources and selection
 // maps. Anything without DD / consecutive-loss state is explicitly HEALTHY.

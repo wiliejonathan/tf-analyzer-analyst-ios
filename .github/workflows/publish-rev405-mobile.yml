@@ -1,0 +1,50 @@
+name: Publish iOS Browser REV405 latest-month risk
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'release-staging/REV405-mobile/READY'
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: QA
+        run: |
+          set -euo pipefail
+          node --check mobile-data-bridge.js
+          node --check mobile-chrome-shim.js
+          node --check assets/dashboard-mobile.js
+          node --check mobile-license-gate.js
+          node --check mobile-force-update.js
+          node --check service-worker.js
+          node --test tests/activation404.cjs
+          node --test tests/risk405.cjs
+          grep -q 'rev405-latest-month-risk' service-worker.js
+          echo 'REV405 mobile QA PASS'
+      - name: Build
+        run: |
+          set -euo pipefail
+          OUT=/tmp/TF_Analyzer_Analyst_iOS_BROWSER_REV405_LATEST_MONTH_RISK.zip
+          zip -qr "$OUT" . -x '.git/*' '.github/*' 'release-staging/*'
+          unzip -tq "$OUT"
+          sha256sum "$OUT" >
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG=v1.17.18
+          OUT=/tmp/TF_Analyzer_Analyst_iOS_BROWSER_REV405_LATEST_MONTH_RISK.zip
+          NOTES=release-staging/REV405-mobile/RELEASE_NOTES.md
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --target "$GITHUB_SHA" --title 'TF Analyzer Analyst V1.17.18 - REV405 Latest Month Risk' --notes-file "$NOTES" --latest
+            gh release upload "$TAG" "$OUT" --clobber
+          else
+            gh release create "$TAG" "$OUT" --target "$GITHUB_SHA" --title 'TF Analyzer Analyst V1.17.18 - REV405 Latest Month Risk' --notes-file "$NOTES" --latest
+          fi
