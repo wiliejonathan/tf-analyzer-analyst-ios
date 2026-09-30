@@ -6576,18 +6576,22 @@ const hours=Math.floor(totalMinutes/60); const minutes=totalMinutes-hours*60;
 const parts=[]; if(days>0)parts.push(days+'d'); if(hours>0||days>0)parts.push(hours+'h'); parts.push(minutes+'m');
 return parts.join(' ');
 }
-function tf_renderHoldingPeriodTables(tableRows) {
+function tf_renderHoldingPeriodTables(allTickerRows, filteredRows) {
 const leftBody=document.getElementById('tf-holding-body-left');
 const rightBody=document.getElementById('tf-holding-body-right');
 if(!leftBody||!rightBody)return;
-// REV386: exact source is the final trade rows rendered/exported by Table 3 after active filters.
-const rows=Array.isArray(tableRows)?tableRows.filter(r=>r&&!r.isWithdraw):[];
+// REV386 FINAL: Holding duration uses Table 3 Created At/Closed At. Max uses all active Analyst-Pair history; Avg uses active Table 3 filters.
+const allRows=Array.isArray(allTickerRows)?allTickerRows.filter(r=>r&&!r.isWithdraw):[];
+const avgRows=Array.isArray(filteredRows)?filteredRows.filter(r=>r&&!r.isWithdraw):[];
 function keyOf(row){const analyst=String(row&&row.analyst||'').trim();const pair=String(row&&row.pair||'').trim().toUpperCase();return analyst&&pair?analyst+' - '+pair:'';}
-const names=Array.from(new Set(rows.map(keyOf).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'id',{sensitivity:'base'}));
+const names=Array.from(new Set(allRows.map(keyOf).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'id',{sensitivity:'base'}));
 const maxBy=new Map(),avgAgg=new Map();
-for(const row of rows){
+for(const row of allRows){
 const k=keyOf(row),ms=tf_getHoldingDurationMs(row); if(!k||ms===null)continue;
 const prev=maxBy.get(k); if(!Number.isFinite(prev)||ms>prev)maxBy.set(k,ms);
+}
+for(const row of avgRows){
+const k=keyOf(row),ms=tf_getHoldingDurationMs(row); if(!k||ms===null)continue;
 let a=avgAgg.get(k); if(!a){a={sum:0,count:0};avgAgg.set(k,a);} a.sum+=ms;a.count++;
 }
 function renderSide(tbody,subset){
@@ -6724,6 +6728,7 @@ tf_refreshSingleMonthSelectors();
 tf_syncSingleMonthSelectorsUI();
 }
 catch (e) { }
+const tf_holdingAllTickerRows = baseRows.slice();
 try {
 baseRows = tf_filterRowsByTradeTimeRange(baseRows, maxMonthIdx);
 }
@@ -7064,7 +7069,7 @@ catch (e) { }
 const priceBusy = tf_isMyfxbookPriceLoading();
 const rowsForUi = tf_getHistoryRowsForUiAndExport(rowsForDisplay);
 try {
-tf_renderHoldingPeriodTables(rowsForUi);
+tf_renderHoldingPeriodTables(tf_holdingAllTickerRows, rowsForUi);
 }
 catch (e) { }
 try {
