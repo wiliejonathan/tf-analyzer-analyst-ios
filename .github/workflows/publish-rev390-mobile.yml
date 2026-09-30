@@ -1,0 +1,92 @@
+name: Publish iOS Browser REV390 Activation fallback
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'release-staging/REV390-mobile/READY'
+permissions:
+  contents: write
+concurrency:
+  group: publish-mobile-rev390
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate REV390 source
+        run: |
+          set -euo pipefail
+          node --check assets/dashboard-mobile.js
+          node --check mobile-license-gate.js
+          node --check mobile-force-update.js
+          node --check service-worker.js
+          python3 - <<'PY'
+          from pathlib import Path
+          d=Path('assets/dashboard-mobile.js').read_text()
+          gate=Path('mobile-license-gate.js').read_text()
+          idx=Path('index.html').read_text()
+          sw=Path('service-worker.js').read_text()
+          upd=Path('mobile-force-update.js').read_text()
+          assert 'REV387: Max and Avg both use the exact active Table 3 filtered trade rows.' in d
+          assert 'LICENSE_ENDPOINT_POINTER_URL' in gate
+          assert 'LICENSE_DIRECT_FALLBACK_URL' in gate
+          assert 'DIRECT_APPS_SCRIPT_PUBLIC_LOOKUP' in gate
+          assert 'MOBILE_TOKEN_LOGIN_OK_FALLBACK' in gate
+          assert "action: 'lookup'" in gate
+          assert "'APPS_SCRIPT_HTTP_ERROR'" in gate
+          assert "mobileVersion: '1.17.03'" in gate
+          assert "remoteRevision: 'REV390'" in gate
+          assert '?rev=390' in idx and '?rev=390' in sw and '?rev=390' in gate
+          assert "var CURRENT_TAG = 'v1.17.03';" in upd
+          print('REV390 mobile source QA PASS')
+          PY
+      - name: Probe fallback endpoint with dummy credentials
+        run: |
+          set -euo pipefail
+          POINTER='https://raw.githubusercontent.com/wiliejonathan/tf-analyzer-admin/main/license-endpoint.json'
+          curl -fsSL --connect-timeout 10 --max-time 20 "$POINTER" -o /tmp/pointer.json
+          python3 - <<'PY'
+          import json,re
+          p=json.load(open('/tmp/pointer.json'))
+          u=str(p.get('apiUrl') or '')
+          assert re.match(r'^https://script\.google\.com/macros/s/[A-Za-z0-9_-]+/exec$',u),u
+          open('/tmp/apps_url','w').write(u)
+          print('Pointer OK')
+          PY
+          APPS_URL="$(cat /tmp/apps_url)"
+          CODE=$(curl -sSL -o /tmp/license.body -w '%{http_code}' --connect-timeout 10 --max-time 30             -H 'Content-Type: text/plain;charset=UTF-8'             --data '{"action":"lookup","email":"diagnostic@example.invalid","token":"INVALID-DIAGNOSTIC","deviceType":"MOBILE","clientType":"MOBILE","source":"REV390_QA"}'             "$APPS_URL")
+          test "$CODE" = "200"
+          python3 - <<'PY'
+          import json
+          r=json.load(open('/tmp/license.body'))
+          assert r.get('valid') is False
+          assert r.get('code') == 'LICENSE_NOT_FOUND'
+          print('Direct Apps Script fallback QA PASS')
+          PY
+      - name: Build bundle
+        run: |
+          set -euo pipefail
+          source release-staging/REV390-mobile/release.env
+          rm -f "/tmp/$ASSET" "/tmp/$ASSET.sha256"
+          zip -qr "/tmp/$ASSET" . -x '.git/*' '.github/*' 'release-staging/*' 'audit/*'
+          unzip -tq "/tmp/$ASSET"
+          SHA=$(sha256sum "/tmp/$ASSET" | awk '{print $1}')
+          printf '%s  %s\n' "$SHA" "$ASSET" > "/tmp/$ASSET.sha256"
+          echo "MOBILE_SHA256=$SHA" >> "$GITHUB_ENV"
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          source release-staging/REV390-mobile/release.env
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --target "$GITHUB_SHA" --title "$TITLE" --notes-file release-staging/REV390-mobile/RELEASE_NOTES.md --latest
+            gh release upload "$TAG" "/tmp/$ASSET" "/tmp/$ASSET.sha256" --clobber
+          else
+            gh release create "$TAG" "/tmp/$ASSET" "/tmp/$ASSET.sha256" --target "$GITHUB_SHA" --title "$TITLE" --notes-file release-staging/REV390-mobile/RELEASE_NOTES.md --latest
+          fi
+          echo "Published $TAG SHA256=$MOBILE_SHA256"
