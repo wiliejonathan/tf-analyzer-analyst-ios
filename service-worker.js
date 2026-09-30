@@ -1,22 +1,22 @@
-const CACHE='tf-analyzer-analyst-mobile-v153-rev383-holding-ui-fix';
+const CACHE='tf-analyzer-analyst-mobile-v154-rev384-holding-alignment-fix';
 const ASSETS=[
-  './assets/dashboard-mobile.js?rev=383',
-  './assets/dashboard-original.css?rev=383',
+  './assets/dashboard-mobile.js?rev=384',
+  './assets/dashboard-original.css?rev=384',
   './icon32.png',
   './icons/icon-180.png',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './index.html',
   './manifest.webmanifest',
-  './mobile-app-shell.js?rev=383',
-  './mobile-remote.js?rev=383',
-  './mobile-chrome-shim.js?rev=383',
-  './mobile-data-bridge.js?rev=383',
-  './mobile-force-update.js?rev=383',
-  './mobile-license-gate.js?rev=383',
-  './mobile-remote-dashboard-home-hotfix.js?rev=383',
-  './mobile-import-fix-v30.js?rev=383',
-  './mobile-overrides.css?rev=383'
+  './mobile-app-shell.js?rev=384',
+  './mobile-remote.js?rev=384',
+  './mobile-chrome-shim.js?rev=384',
+  './mobile-data-bridge.js?rev=384',
+  './mobile-force-update.js?rev=384',
+  './mobile-license-gate.js?rev=384',
+  './mobile-remote-dashboard-home-hotfix.js?rev=384',
+  './mobile-import-fix-v30.js?rev=384',
+  './mobile-overrides.css?rev=384'
 ];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
