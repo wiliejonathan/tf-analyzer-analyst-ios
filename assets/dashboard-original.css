@@ -191,16 +191,19 @@ html:not([data-tf-server-authorized="1"])body{overflow:hidden!important;backgrou
   font-weight:800 !important;
 }
 .tf-latest-risk-icon{
-  display:inline-grid;
-  place-items:center;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
   width:10px;
   height:10px;
   min-width:10px;
   border-radius:50%;
-  vertical-align:0;
+  vertical-align:middle;
+  position:relative;
+  top:-0.5px;
   font-family:Arial,sans-serif;
   font-size:7px;
-  line-height:1;
+  line-height:10px;
   font-weight:900;
   box-sizing:border-box;
   user-select:none;
@@ -338,3 +341,7 @@ html:not([data-tf-server-authorized="1"])body{overflow:hidden!important;backgrou
 #history-table tbody .tf-history-cb-cell input{
   color:initial !important;
 }
+
+
+/* REV396 — icon/text baseline precision: ✓ ! × centered to analyst text. */
+.tf-latest-risk-icon > *{ line-height:1 !important; }
