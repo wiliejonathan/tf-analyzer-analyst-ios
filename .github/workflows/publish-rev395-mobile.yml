@@ -1,0 +1,106 @@
+name: Publish iOS Browser REV395 all analyst name colors
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'release-staging/REV395-mobile/READY'
+permissions:
+  contents: write
+concurrency:
+  group: publish-mobile-rev395
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate REV395 aggregate analyst-name colors
+        run: |
+          set -euo pipefail
+          node --check assets/dashboard-mobile.js
+          node --check mobile-license-gate.js
+          node --check mobile-force-update.js
+          node --check service-worker.js
+          python3 - <<'PY'
+          from pathlib import Path
+          dash=Path('assets/dashboard-mobile.js').read_text()
+          gate=Path('mobile-license-gate.js').read_text()
+          idx=Path('index.html').read_text()
+          sw=Path('service-worker.js').read_text()
+          upd=Path('mobile-force-update.js').read_text()
+          proxy=Path('activation-proxy.html').read_text()
+          css=Path('assets/dashboard-original.css').read_text()
+          assert 'tf_renderHoldingPeriodTables(rowsForCalc);' in dash
+          assert 'REV392 HARD RANGE BOUNDARY' in dash
+          assert 'tfTradeRangeStartMonthIdx = startIdx;' in dash
+          assert 'if (mk !== firstMonthKey)' not in dash
+          assert 'Holding Period must use the exact rows that are CHECKED/enabled in Table 3' in dash
+          assert 'REV393: Latest-month Drawdown / Consecutive Loss warning system' in dash
+          assert 'const drawdown = cumulative < (peak - 1e-9);' in dash
+          assert 'const consecutiveLoss = maxLossStreak >= 2;' in dash
+          assert 'const severity = (drawdown && consecutiveLoss) ? 2' in dash
+          assert "icon.textContent = st.severity >= 2 ? '×' : '!';" in dash
+          assert 'monthKey === __riskState.monthKey' in dash
+          assert 'tf_applyLatestRiskToElement(analystLink, entry.baseName, null, false);' in dash
+          assert 'function tf_applyLatestRiskPairIconOnly' in dash
+          assert "tf_applyLatestRiskToElement(nameCell, a.baseName || a.name, null, false);" in dash
+          assert "tf_applyLatestRiskToElement(analystCell, row.analyst || '', null, false);" in dash
+          assert "tf_applyLatestRiskPairIconOnly(analystCell, row.analyst || '', row.pair || '', 'left');" in dash
+          assert "tf_applyLatestRiskToElement(n,name.slice(0,sep),null,false);" in dash
+          assert "tf_applyLatestRiskToElement(analystLink, entry.baseName, null, false);" in dash
+          assert "tf_applyLatestRiskToElement(nameSpan, name, null, false);" in dash
+          assert "icon.textContent = st.severity >= 2 ? '×' : (st.severity === 1 ? '!' : '✓');" in dash
+          assert ".tf-latest-risk-icon-healthy" in css
+          assert '.tf-latest-risk-warning' in css
+          assert '.tf-latest-risk-critical' in css
+          assert '#facc15' in css and '#ef4444' in css
+          assert "function tf_applyLatestRiskToElement(el, analyst, pair, showIcon, iconPosition)" in dash
+          assert "tf_applyLatestRiskToElement(nameSpan, it.name, null, true, 'left');" in dash
+          assert "tf_applyLatestRiskToElement(nameCell, a.baseName || a.name, null, false);" in dash
+          assert "tf_applyLatestRiskToElement(span, analystName, a.pair || getPrimaryPairForAnalyst(a), true, 'left');" in dash
+          assert "tf_applyLatestRiskToElement(analystCell, row.analyst || '', null, false);" in dash
+          assert "tf_applyLatestRiskToElement(a, name, null, true, 'left');" in dash
+          assert "tf_applyLatestRiskToElement(nameSpan, name, null, false);" in dash
+          assert "width:10px;" in css and "height:10px;" in css
+          assert ".tf-latest-risk-icon-left" in css
+          assert ".tf-risk-name-left" in css
+          assert 'LICENSE_ANDROID_RELAY_URL' in gate
+          assert 'REV392: Android WebView' in gate
+          assert "path: isLicenseFallbackPath(path) ? path : '/mobile/login'" in gate
+          assert 'androidRelayLicenseLookup' in gate
+          assert 'return await directLicenseLookup(body, Math.max(timeoutMs, 25000));' in gate
+          assert 'remoteRevision: \'REV395\'' in gate
+          assert "mobileVersion: '1.17.08'" in gate
+          assert 'TF_LICENSE_RELAY_LOOKUP' in proxy
+          assert "lookup(d.path||'/mobile/login'" in proxy
+          assert "remoteRevision:'REV395'" in proxy
+          assert 'REV395_ANDROID_WEB_RELAY' in proxy
+          assert '?rev=394' in idx
+          assert 'rev395-all-analyst-name-colors' in sw
+          assert "var CURRENT_TAG = 'v1.17.08';" in upd
+          print('REV395 mobile all-analyst-name-color QA PASS')
+          PY
+      - name: Build bundle
+        run: |
+          set -euo pipefail
+          OUT=/tmp/TF_Analyzer_Analyst_iOS_BROWSER_REV395_ALL_ANALYST_NAME_COLORS.zip
+          zip -qr "$OUT" . -x '.git/*' '.github/*' 'release-staging/*'
+          unzip -tq "$OUT"
+          sha256sum "$OUT" > "$OUT.sha256"
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG=v1.17.08
+          OUT=/tmp/TF_Analyzer_Analyst_iOS_BROWSER_REV395_ALL_ANALYST_NAME_COLORS.zip
+          NOTES=release-staging/REV395-mobile/RELEASE_NOTES.md
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --target "$GITHUB_SHA" --title 'TF Analyzer Analyst V1.17.08 - REV395 All Analyst Name Colors' --notes-file "$NOTES" --latest
+            gh release upload "$TAG" "$OUT" "$OUT.sha256" --clobber
+          else
+            gh release create "$TAG" "$OUT" "$OUT.sha256" --target "$GITHUB_SHA" --title 'TF Analyzer Analyst V1.17.08 - REV395 All Analyst Name Colors' --notes-file "$NOTES" --latest
+          fi
