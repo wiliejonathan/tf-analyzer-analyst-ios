@@ -11,6 +11,7 @@ on:
       - '!release-staging/REV381-mobile/**'
       - '!release-staging/REV381-price-provider-audit/**'
       - '!release-staging/REV382-mobile/**'
+      - '!release-staging/REV383-mobile/**'
 
 permissions:
   contents: write
