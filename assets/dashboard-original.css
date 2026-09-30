@@ -178,6 +178,10 @@ html:not([data-tf-server-authorized="1"])body{overflow:hidden!important;backgrou
 
 
 /* REV393 — latest-month Drawdown / Consecutive Loss warning states */
+.tf-latest-risk-healthy{
+  color:#22c55e !important;
+  font-weight:800 !important;
+}
 .tf-latest-risk-warning{
   color:#facc15 !important;
   font-weight:800 !important;
@@ -230,16 +234,22 @@ html:not([data-tf-server-authorized="1"])body{overflow:hidden!important;backgrou
   font-size:7px;
   box-shadow:0 0 0 1px rgba(239,68,68,.18);
 }
+.tf-perf-name-text.tf-latest-risk-healthy,
 .tf-perf-name-text.tf-latest-risk-warning,
 .tf-perf-name-text.tf-latest-risk-critical,
+.tf-holding-analyst.tf-latest-risk-healthy,
 .tf-holding-analyst.tf-latest-risk-warning,
 .tf-holding-analyst.tf-latest-risk-critical,
+#history-table td.tf-latest-risk-healthy,
 #history-table td.tf-latest-risk-warning,
 #history-table td.tf-latest-risk-critical,
+#drawdown-table td.tf-latest-risk-healthy,
 #drawdown-table td.tf-latest-risk-warning,
 #drawdown-table td.tf-latest-risk-critical,
+.tf-score-analyst.tf-latest-risk-healthy,
 .tf-score-analyst.tf-latest-risk-warning,
 .tf-score-analyst.tf-latest-risk-critical,
+.tf-users-analyst-link.tf-latest-risk-healthy,
 .tf-users-analyst-link.tf-latest-risk-warning,
 .tf-users-analyst-link.tf-latest-risk-critical{
   opacity:1 !important;
@@ -255,4 +265,24 @@ html:not([data-tf-server-authorized="1"])body{overflow:hidden!important;backgrou
 #drawdown-table tbody td.tf-risk-name-left,
 #tf-score-history-section tbody td.tf-risk-name-left{
   text-align:left !important;
+}
+
+
+/* REV396 — Table 3 row text follows PNL %, analyst cell follows analyst status. */
+#history-table tbody tr.tf-history-row-pnl-positive > td:not([data-history-col="analyst"]){
+  color:var(--success) !important;
+}
+#history-table tbody tr.tf-history-row-pnl-negative > td:not([data-history-col="analyst"]){
+  color:var(--danger) !important;
+}
+#history-table tbody tr.tf-history-row-pnl-positive > td[data-history-col="analyst"].tf-latest-risk-healthy{
+  color:#22c55e !important;
+}
+#history-table tbody tr.tf-history-row-pnl-positive > td[data-history-col="analyst"].tf-latest-risk-warning,
+#history-table tbody tr.tf-history-row-pnl-negative > td[data-history-col="analyst"].tf-latest-risk-warning{
+  color:#facc15 !important;
+}
+#history-table tbody tr.tf-history-row-pnl-positive > td[data-history-col="analyst"].tf-latest-risk-critical,
+#history-table tbody tr.tf-history-row-pnl-negative > td[data-history-col="analyst"].tf-latest-risk-critical{
+  color:#ef4444 !important;
 }
