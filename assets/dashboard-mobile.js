@@ -4408,6 +4408,7 @@ let raw=String(v || '');
 try { raw=raw.normalize('NFKC'); } catch (e) { }
 raw=raw
 .replace(/[\u200B-\u200D\u2060\uFEFF]/g,'')
+.replace(/^\s*[✓!×]\s*/,'')
 .replace(/\s*·\s*(?:CRITICAL|WARNING|HEALTHY)\b.*$/i,'')
 .replace(/\s+/g,' ')
 .trim();
