@@ -1,14 +1,13 @@
 # TF Analyzer Analyst V1.16.99 — REV386
 
-## Holding Period Final Table 3 Accuracy
+## Holding Period Final Accuracy
 
-- Dataset Holding Period = exact final trade rows displayed/exported by Table 3 after all active filters.
-- Holding per trade = Closed At (`displayDate`) − Created At (`createdDate`).
-- Numeric sort keys are fallback-only.
+- Holding per trade = Closed At (`displayDate`) − Created At (`createdDate`) from Table 3.
+- `createdSortKey` / `sortKey` are fallback-only when display-date strings are missing.
 - Withdraw rows are excluded.
-- Max = longest holding among the currently active Table 3 trades per Analyst-Pair.
-- Avg = average holding among the same active Table 3 trades.
-- Time Range, Time Range per Month, Filter Tanggal, analyst and pair filters therefore affect both Max and Avg consistently with Table 3.
-- REV384 alignment/performance and import persistence are retained.
+- **Max Holding Period** = longest holding from **all history** for each active Analyst-Pair.
+- **Avg Holding Period** = average holding from the **active Table 3 dataset**, so Time Range, Time Range per Month, and Filter Tanggal affect Avg.
+- Analyst/Pair ticker filters control which Analyst-Pair rows appear.
+- REV384 alignment/performance, import persistence, custom cursor, and no-inner-scroll behavior are retained.
 
 Version: **v1.16.99 / REV386**
