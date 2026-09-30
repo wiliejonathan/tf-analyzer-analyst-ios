@@ -28,7 +28,7 @@ jobs:
           node --test tests/performance406.cjs
           npm install --no-save playwright
           npx playwright install --with-deps chromium
-          TF_RISK_SOURCE=assets/dashboard-mobile.js TF_DASHBOARD_CSS=assets/dashboard-original.css node tests/browser406.cjs
+          TF_RISK_SOURCE=assets/dashboard-mobile.js TF_DASHBOARD_CSS=assets/dashboard-original.css TF_EXTRA_CSS=mobile-overrides.css node tests/browser406.cjs
           grep -q 'rev406-layout-scroll-fix' service-worker.js
           echo 'REV406 mobile QA PASS'
       - name: Build
