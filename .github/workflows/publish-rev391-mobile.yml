@@ -1,0 +1,69 @@
+name: Publish iOS Browser REV391
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'release-staging/REV391-mobile/READY'
+permissions:
+  contents: write
+concurrency:
+  group: publish-mobile-rev391
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate REV391 source
+        run: |
+          set -euo pipefail
+          node --check assets/dashboard-mobile.js
+          node --check mobile-license-gate.js
+          node --check mobile-force-update.js
+          node --check service-worker.js
+          python3 - <<'PY'
+          from pathlib import Path
+          dash=Path('assets/dashboard-mobile.js').read_text()
+          gate=Path('mobile-license-gate.js').read_text()
+          idx=Path('index.html').read_text()
+          sw=Path('service-worker.js').read_text()
+          upd=Path('mobile-force-update.js').read_text()
+          proxy=Path('activation-proxy.html').read_text()
+          assert 'tf_renderHoldingPeriodTables(rowsForCalc);' in dash
+          assert 'Holding Period must use the exact rows that are CHECKED/enabled in Table 3' in dash
+          assert 'LICENSE_ANDROID_RELAY_URL' in gate
+          assert 'androidRelayLicenseLookup' in gate
+          assert 'return await directLicenseLookup(body, Math.max(timeoutMs, 25000));' in gate
+          assert 'remoteRevision: \'REV391\'' in gate
+          assert "mobileVersion: '1.17.04'" in gate
+          assert 'TF_LICENSE_RELAY_LOOKUP' in proxy
+          assert 'REV391_ANDROID_WEB_RELAY' in proxy
+          assert '?rev=391' in idx
+          assert 'rev391-holding-checkbox-android-relay' in sw
+          assert "var CURRENT_TAG = 'v1.17.04';" in upd
+          print('REV391 mobile source QA PASS')
+          PY
+      - name: Build bundle
+        run: |
+          set -euo pipefail
+          OUT=/tmp/TF_Analyzer_Analyst_iOS_BROWSER_REV391_HOLDING_CHECKBOX_ANDROID_ACTIVATION.zip
+          zip -qr "$OUT" . -x '.git/*' '.github/*' 'release-staging/*'
+          unzip -tq "$OUT"
+          sha256sum "$OUT" > "$OUT.sha256"
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG=v1.17.04
+          OUT=/tmp/TF_Analyzer_Analyst_iOS_BROWSER_REV391_HOLDING_CHECKBOX_ANDROID_ACTIVATION.zip
+          NOTES=release-staging/REV391-mobile/RELEASE_NOTES.md
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --target "$GITHUB_SHA" --title 'TF Analyzer Analyst V1.17.04 - REV391' --notes-file "$NOTES" --latest
+            gh release upload "$TAG" "$OUT" "$OUT.sha256" --clobber
+          else
+            gh release create "$TAG" "$OUT" "$OUT.sha256" --target "$GITHUB_SHA" --title 'TF Analyzer Analyst V1.17.04 - REV391' --notes-file "$NOTES" --latest
+          fi
