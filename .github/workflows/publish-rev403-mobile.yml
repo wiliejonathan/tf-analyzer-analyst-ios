@@ -32,7 +32,7 @@ jobs:
           grep -q 'function tfMobileRecoverRememberedLinksV401' mobile-data-bridge.js
           grep -q 'tf_renderHoldingPeriodTables(rowsForCalc);' assets/dashboard-mobile.js
           grep -q 'tf-analyst-name-color-target' assets/dashboard-original.css
-          grep -q '?rev=402' index.html
+          grep -q '?rev=403' index.html
           grep -q 'rev403-table-column-sizing' service-worker.js
           grep -q "CURRENT_TAG = 'v1.17.16'" mobile-force-update.js
           grep -q "remoteRevision: 'REV403'" mobile-license-gate.js
