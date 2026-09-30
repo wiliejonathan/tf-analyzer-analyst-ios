@@ -345,3 +345,16 @@ html:not([data-tf-server-authorized="1"])body{overflow:hidden!important;backgrou
 
 /* REV396 — icon/text baseline precision: ✓ ! × centered to analyst text. */
 .tf-latest-risk-icon > *{ line-height:1 !important; }
+
+
+/* REV397 — nested analyst name color inheritance.
+   Keep icon glyph colors intact while forcing every nested analyst label/link to status color. */
+.tf-latest-risk-healthy :not(.tf-latest-risk-icon){
+  color:#22c55e !important;
+}
+.tf-latest-risk-warning :not(.tf-latest-risk-icon){
+  color:#facc15 !important;
+}
+.tf-latest-risk-critical :not(.tf-latest-risk-icon){
+  color:#ef4444 !important;
+}
