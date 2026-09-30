@@ -4495,7 +4495,7 @@ endingPips:cumulative, peakPips:peak, severity
 });
 const byAnalyst = new Map();
 byPair.forEach((st) => {
-if (!st || !st.severity) return;
+if (!st) return;
 const key = tf_latestRiskNormAnalyst(st.analyst);
 const prev = byAnalyst.get(key);
 if (!prev || st.severity > prev.severity) {
@@ -4523,12 +4523,12 @@ if (pair) return st.byPair.get(a + '|' + tf_latestRiskNormPair(pair)) || null;
 return st.byAnalyst.get(a) || null;
 }
 function tf_latestRiskReason(st) {
-if (!st || !st.severity) return '';
+if (!st) return '';
 const month = st.monthKey ? (' · ' + st.monthKey) : '';
 if (st.severity >= 2) return 'CRITICAL' + month + ': Drawdown + Consecutive Loss';
 if (st.drawdown) return 'WARNING' + month + ': Drawdown';
 if (st.consecutiveLoss) return 'WARNING' + month + ': Consecutive Loss';
-return '';
+return 'HEALTHY' + month + ': No Drawdown / Consecutive Loss';
 }
 function tf_applyLatestRiskToElement(el, analyst, pair, showIcon, iconPosition) {
 try {
@@ -4536,11 +4536,13 @@ if (!el) return null;
 const st = tf_getLatestRiskState(analyst, pair);
 el.classList.remove('tf-latest-risk-warning','tf-latest-risk-critical');
 el.querySelectorAll && el.querySelectorAll('[data-tf-latest-risk-icon="1"]').forEach((x) => x.remove());
-if (!st || !st.severity) {
+if (!st) {
 if (el.dataset && el.dataset.tfRiskBaseTitle != null) el.title = el.dataset.tfRiskBaseTitle;
 return null;
 }
+if (st.severity > 0) {
 el.classList.add(st.severity >= 2 ? 'tf-latest-risk-critical' : 'tf-latest-risk-warning');
+}
 if (el.dataset) {
 if (el.dataset.tfRiskBaseTitle == null) el.dataset.tfRiskBaseTitle = el.title || '';
 const base = el.dataset.tfRiskBaseTitle || '';
@@ -4550,8 +4552,9 @@ if (showIcon !== false) {
 const icon = document.createElement('span');
 icon.setAttribute('data-tf-latest-risk-icon','1');
 const pos = String(iconPosition || 'right').toLowerCase() === 'left' ? 'left' : 'right';
-icon.className = 'tf-latest-risk-icon tf-latest-risk-icon-' + pos + ' ' + (st.severity >= 2 ? 'tf-latest-risk-icon-critical' : 'tf-latest-risk-icon-warning');
-icon.textContent = st.severity >= 2 ? '×' : '!';
+const stateClass = st.severity >= 2 ? 'tf-latest-risk-icon-critical' : (st.severity === 1 ? 'tf-latest-risk-icon-warning' : 'tf-latest-risk-icon-healthy');
+icon.className = 'tf-latest-risk-icon tf-latest-risk-icon-' + pos + ' ' + stateClass;
+icon.textContent = st.severity >= 2 ? '×' : (st.severity === 1 ? '!' : '✓');
 icon.setAttribute('aria-label', tf_latestRiskReason(st));
 icon.title = tf_latestRiskReason(st);
 if (pos === 'left') el.insertBefore(icon, el.firstChild || null);
@@ -4568,12 +4571,13 @@ try {
 if (!el) return null;
 el.querySelectorAll && el.querySelectorAll('[data-tf-latest-risk-icon="1"]').forEach((x) => x.remove());
 const st = tf_getLatestRiskState(analyst, pair);
-if (!st || !st.severity) return null;
+if (!st) return null;
 const icon = document.createElement('span');
 icon.setAttribute('data-tf-latest-risk-icon','1');
 const pos = String(iconPosition || 'right').toLowerCase() === 'left' ? 'left' : 'right';
-icon.className = 'tf-latest-risk-icon tf-latest-risk-icon-' + pos + ' ' + (st.severity >= 2 ? 'tf-latest-risk-icon-critical' : 'tf-latest-risk-icon-warning');
-icon.textContent = st.severity >= 2 ? '×' : '!';
+const stateClass = st.severity >= 2 ? 'tf-latest-risk-icon-critical' : (st.severity === 1 ? 'tf-latest-risk-icon-warning' : 'tf-latest-risk-icon-healthy');
+icon.className = 'tf-latest-risk-icon tf-latest-risk-icon-' + pos + ' ' + stateClass;
+icon.textContent = st.severity >= 2 ? '×' : (st.severity === 1 ? '!' : '✓');
 icon.setAttribute('aria-label', tf_latestRiskReason(st));
 icon.title = tf_latestRiskReason(st);
 if (pos === 'left') el.insertBefore(icon, el.firstChild || null);
@@ -4583,7 +4587,8 @@ return st;
 catch (e) { return null; }
 }
 // REV394 presentation: smaller icons, left placement, ticker color-only.
-// REV395 presentation: every analyst NAME uses aggregate analyst severity across all pairs.\n// ===== END REV393 latest-month risk warning system =====
+// REV395 presentation: every analyst NAME uses aggregate analyst severity across all pairs.
+// REV395 healthy state: no DD and no consecutive loss => green check icon on icon-enabled surfaces.\n// ===== END REV393 latest-month risk warning system =====
 
 function renderSummaryTable() {
 const tbody = document.querySelector('#summary-table tbody');
