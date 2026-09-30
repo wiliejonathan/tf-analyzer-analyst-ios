@@ -189,18 +189,26 @@ html:not([data-tf-server-authorized="1"])body{overflow:hidden!important;backgrou
 .tf-latest-risk-icon{
   display:inline-grid;
   place-items:center;
-  width:15px;
-  height:15px;
-  min-width:15px;
-  margin-left:5px;
+  width:10px;
+  height:10px;
+  min-width:10px;
   border-radius:50%;
-  vertical-align:-2px;
+  vertical-align:0;
   font-family:Arial,sans-serif;
-  font-size:12px;
+  font-size:7px;
   line-height:1;
   font-weight:900;
   box-sizing:border-box;
   user-select:none;
+  flex:0 0 10px;
+}
+.tf-latest-risk-icon-left{
+  margin-left:0;
+  margin-right:4px;
+}
+.tf-latest-risk-icon-right{
+  margin-left:4px;
+  margin-right:0;
 }
 .tf-latest-risk-icon-warning{
   background:#facc15;
@@ -212,6 +220,7 @@ html:not([data-tf-server-authorized="1"])body{overflow:hidden!important;backgrou
   background:#ef4444;
   border:1px solid #f87171;
   color:#fff;
+  font-size:7px;
   box-shadow:0 0 0 1px rgba(239,68,68,.18);
 }
 .tf-perf-name-text.tf-latest-risk-warning,
@@ -227,4 +236,16 @@ html:not([data-tf-server-authorized="1"])body{overflow:hidden!important;backgrou
 .tf-users-analyst-link.tf-latest-risk-warning,
 .tf-users-analyst-link.tf-latest-risk-critical{
   opacity:1 !important;
+}
+
+
+/* REV394 — row alignment only; headers remain centered by existing table styles. */
+.tf-risk-name-left{
+  text-align:left !important;
+}
+#summary-table tbody td.tf-risk-name-left,
+#history-table tbody td.tf-risk-name-left,
+#drawdown-table tbody td.tf-risk-name-left,
+#tf-score-history-section tbody td.tf-risk-name-left{
+  text-align:left !important;
 }
