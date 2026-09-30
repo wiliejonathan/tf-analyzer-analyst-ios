@@ -17,7 +17,7 @@
     }catch(_){}
     const ctrl=new AbortController(); const timer=setTimeout(()=>ctrl.abort(),Math.max(8000,timeoutMs||25000));
     try{
-      const r=await fetch(url,{method:'POST',cache:'no-store',redirect:'follow',signal:ctrl.signal,headers:{'Content-Type':'text/plain;charset=UTF-8','Accept':'application/json,text/plain;q=0.9,*/*;q=0.1'},body:JSON.stringify({action:'lookup',email:clean(body.email),token:clean(body.token),licenseId:String(body.licenseId||body.license||'').trim(),deviceType:'MOBILE',clientType:'MOBILE',source:'REV391_ANDROID_WEB_RELAY'})});
+      const r=await fetch(url,{method:'POST',cache:'no-store',redirect:'follow',signal:ctrl.signal,headers:{'Content-Type':'text/plain;charset=UTF-8','Accept':'application/json,text/plain;q=0.9,*/*;q=0.1'},body:JSON.stringify({action:'lookup',email:clean(body.email),token:clean(body.token),licenseId:String(body.licenseId||body.license||'').trim(),deviceType:'MOBILE',clientType:'MOBILE',source:'REV392_ANDROID_WEB_RELAY'})});
       const t=await r.text(); let j; try{j=JSON.parse(t);}catch(_){throw new Error('Respons relay lisensi bukan JSON.');}
       if(!r.ok){const e=new Error(String(j&&j.message||('Apps Script HTTP '+r.status)));e.code=String(j&&j.code||'RELAY_APPS_SCRIPT_HTTP_ERROR');throw e;}
       if(j&&j.valid===true)return {...j,ok:true,valid:true,sessionValid:true,portableSession:true,tokenGate:true,noDeviceLimit:true,mobileApprovalRequired:false,fallbackTransport:'GITHUB_PAGES_ANDROID_RELAY',code:'MOBILE_TOKEN_LOGIN_OK_RELAY'};
@@ -28,13 +28,17 @@
     const c=String(j&&(j.code||j.error)||'').toUpperCase();
     return ['APPS_SCRIPT_HTTP_ERROR','APPS_SCRIPT_TIMEOUT','APPS_SCRIPT_NETWORK_ERROR','APPS_SCRIPT_INVALID_RESPONSE','APPS_SCRIPT_ERROR'].includes(c)||Number(status||0)>=500;
   }
-  async function lookup(body){
+  async function lookup(path,body){
+    const safePath=(path==='/license-check')?'/license-check':'/mobile/login';
     const ctrl=new AbortController(); const timer=setTimeout(()=>ctrl.abort(),12000);
     try{
-      const r=await fetch(API_BASE+'/mobile/login',{method:'POST',cache:'no-store',redirect:'follow',signal:ctrl.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({...body,deviceType:'MOBILE',clientType:'MOBILE',mobilePlatform:'Android • TF Analyzer Relay',mobileVersion:'1.17.04',remoteRevision:'REV391',requestNonce:String(Date.now())+'-'+Math.random().toString(36).slice(2)})});
+      const r=await fetch(API_BASE+safePath,{method:'POST',cache:'no-store',redirect:'follow',signal:ctrl.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({...body,deviceType:'MOBILE',clientType:'MOBILE',mobilePlatform:'Android • TF Analyzer Relay',mobileVersion:'1.17.05',remoteRevision:'REV392',requestNonce:String(Date.now())+'-'+Math.random().toString(36).slice(2)})});
       const t=await r.text(); let j; try{j=JSON.parse(t);}catch(_){return await direct(body,25000);}
-      if(needsFallback(j,r.status))return await direct(body,25000);
-      return j;
+      if(j&&j.valid===true&&j.sessionValid!==false)return j;
+      // REV392: any Android denial is re-checked against the public license
+      // source. This removes false device/session denials while preserving
+      // genuine invalid/expired token responses from the authoritative lookup.
+      return await direct(body,25000);
     }catch(e){
       if(e&&(e.name==='AbortError'||e.name==='TypeError'))return await direct(body,25000);
       throw e;
@@ -42,7 +46,7 @@
   }
   window.addEventListener('message',async ev=>{
     const d=ev.data||{}; if(d.type!=='TF_LICENSE_RELAY_LOOKUP'||!d.id)return;
-    try{const result=await lookup(d.body||{}); ev.source&&ev.source.postMessage({type:'TF_LICENSE_RELAY_RESULT',id:d.id,result},'*');}
+    try{const result=await lookup(d.path||'/mobile/login',d.body||{}); ev.source&&ev.source.postMessage({type:'TF_LICENSE_RELAY_RESULT',id:d.id,result},'*');}
     catch(e){ev.source&&ev.source.postMessage({type:'TF_LICENSE_RELAY_RESULT',id:d.id,error:{name:e&&e.name||'Error',message:e&&e.message||String(e)}},'*');}
   });
   try{parent&&parent.postMessage({type:'TF_LICENSE_RELAY_READY'},'*');}catch(_){}
