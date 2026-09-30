@@ -4534,20 +4534,10 @@ function tf_applyLatestRiskToElement(el, analyst, pair, showIcon, iconPosition) 
 try {
 if (!el) return null;
 const st = tf_getLatestRiskState(analyst, pair);
-el.classList.remove('tf-latest-risk-warning','tf-latest-risk-critical');
+el.classList.remove('tf-latest-risk-healthy','tf-latest-risk-warning','tf-latest-risk-critical');
 el.querySelectorAll && el.querySelectorAll('[data-tf-latest-risk-icon="1"]').forEach((x) => x.remove());
-if (!st) {
-if (el.dataset && el.dataset.tfRiskBaseTitle != null) el.title = el.dataset.tfRiskBaseTitle;
-return null;
-}
-if (st.severity > 0) {
-el.classList.add(st.severity >= 2 ? 'tf-latest-risk-critical' : 'tf-latest-risk-warning');
-}
-if (el.dataset) {
-if (el.dataset.tfRiskBaseTitle == null) el.dataset.tfRiskBaseTitle = el.title || '';
-const base = el.dataset.tfRiskBaseTitle || '';
-el.title = (base ? base + ' · ' : '') + tf_latestRiskReason(st);
-}
+if (!st) return null;
+el.classList.add(st.severity >= 2 ? 'tf-latest-risk-critical' : (st.severity === 1 ? 'tf-latest-risk-warning' : 'tf-latest-risk-healthy'));
 if (showIcon !== false) {
 const icon = document.createElement('span');
 icon.setAttribute('data-tf-latest-risk-icon','1');
@@ -4570,7 +4560,7 @@ function tf_applyLatestRiskPairIconOnly(el, analyst, pair, iconPosition) {
 try {
 if (!el) return null;
 el.querySelectorAll && el.querySelectorAll('[data-tf-latest-risk-icon="1"]').forEach((x) => x.remove());
-const st = tf_getLatestRiskState(analyst, pair);
+const st = tf_getLatestRiskState(analyst, pair) || tf_getLatestRiskState(analyst, null);
 if (!st) return null;
 const icon = document.createElement('span');
 icon.setAttribute('data-tf-latest-risk-icon','1');
@@ -6740,6 +6730,12 @@ else {
 balanceCell.textContent = Number.isFinite(row.balancePnl) ? formatMoney(row.balancePnl) : formatMoney(startingBalance || 0);
 }
 tr.appendChild(balanceCell);
+// REV396: every trade row text follows PNL % sign, except Nama Analis which
+// follows analyst risk status (green / yellow / red).
+if (!isWithdrawRow) {
+const __pnlPctForRow = Number.isFinite(Number(row.pnlPercent)) ? Number(row.pnlPercent) : Number(row.pnlDollar || 0);
+tr.classList.add(__pnlPctForRow >= 0 ? 'tf-history-row-pnl-positive' : 'tf-history-row-pnl-negative');
+}
 return tr;
 }
 
@@ -6780,10 +6776,14 @@ function tf_formatHoldingDuration(ms) {
 const raw=Number(ms);
 if(!Number.isFinite(raw)||raw<0)return '—';
 let totalMinutes=Math.round(raw/60000);
-if(totalMinutes<=0)return '0m';
+if(totalMinutes<=0)return '00m';
 const days=Math.floor(totalMinutes/1440); totalMinutes-=days*1440;
 const hours=Math.floor(totalMinutes/60); const minutes=totalMinutes-hours*60;
-const parts=[]; if(days>0)parts.push(days+'d'); if(hours>0||days>0)parts.push(hours+'h'); parts.push(minutes+'m');
+const pad2=(v)=>String(Math.max(0,Math.floor(Number(v)||0))).padStart(2,'0');
+const parts=[];
+if(days>0)parts.push(pad2(days)+'d');
+if(hours>0||days>0)parts.push(pad2(hours)+'h');
+parts.push(pad2(minutes)+'m');
 return parts.join(' ');
 }
 function tf_renderHoldingPeriodTables(filteredRows) {
