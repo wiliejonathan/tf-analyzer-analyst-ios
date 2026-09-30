@@ -1244,6 +1244,8 @@ nameSpan.textContent = formatAnalystDisplayName(name);
 nameSpan.title = String(name || '').trim();
 if (analystNoValue)
 nameSpan.classList.add('tf-analyst-no-value');
+// REV394: every analyst ticker is color-only; never add a warning icon here.
+tf_applyLatestRiskToElement(nameSpan, name, null, false);
 label.appendChild(nameSpan);
 if (pairs.length === 1) {
 const onlyPair = pairs[0];
@@ -4528,7 +4530,7 @@ if (st.drawdown) return 'WARNING' + month + ': Drawdown';
 if (st.consecutiveLoss) return 'WARNING' + month + ': Consecutive Loss';
 return '';
 }
-function tf_applyLatestRiskToElement(el, analyst, pair, showIcon) {
+function tf_applyLatestRiskToElement(el, analyst, pair, showIcon, iconPosition) {
 try {
 if (!el) return null;
 const st = tf_getLatestRiskState(analyst, pair);
@@ -4547,17 +4549,19 @@ el.title = (base ? base + ' · ' : '') + tf_latestRiskReason(st);
 if (showIcon !== false) {
 const icon = document.createElement('span');
 icon.setAttribute('data-tf-latest-risk-icon','1');
-icon.className = 'tf-latest-risk-icon ' + (st.severity >= 2 ? 'tf-latest-risk-icon-critical' : 'tf-latest-risk-icon-warning');
+const pos = String(iconPosition || 'right').toLowerCase() === 'left' ? 'left' : 'right';
+icon.className = 'tf-latest-risk-icon tf-latest-risk-icon-' + pos + ' ' + (st.severity >= 2 ? 'tf-latest-risk-icon-critical' : 'tf-latest-risk-icon-warning');
 icon.textContent = st.severity >= 2 ? '×' : '!';
 icon.setAttribute('aria-label', tf_latestRiskReason(st));
 icon.title = tf_latestRiskReason(st);
-el.appendChild(icon);
+if (pos === 'left') el.insertBefore(icon, el.firstChild || null);
+else el.appendChild(icon);
 }
 return st;
 }
 catch (e) { return null; }
 }
-// ===== END REV393 latest-month risk warning system =====
+// REV394 presentation: smaller icons, left placement, ticker color-only.\n// ===== END REV393 latest-month risk warning system =====
 
 function renderSummaryTable() {
 const tbody = document.querySelector('#summary-table tbody');
@@ -4620,9 +4624,9 @@ let lot = roundLotToTwoDecimals(rawLot);
 const tr = document.createElement('tr');
 const nameCell = document.createElement('td');
 nameCell.textContent = a.baseName || a.name;
-nameCell.classList.add('monthly-sticky-col-2');
+nameCell.classList.add('monthly-sticky-col-2','tf-risk-name-left');
 if (!tf_table1WarnedAnalysts.has(tf_latestRiskNormAnalyst(baseName))) {
-  tf_applyLatestRiskToElement(nameCell, baseName, null, true);
+  tf_applyLatestRiskToElement(nameCell, baseName, null, true, 'left');
   tf_table1WarnedAnalysts.add(tf_latestRiskNormAnalyst(baseName));
 }
 tr.appendChild(nameCell);
@@ -5522,7 +5526,7 @@ const nameSpan = document.createElement("span");
 nameSpan.className = "tf-perf-name-text";
 nameSpan.textContent = it.display || it.name || "";
 nameSpan.title = String(it.name || "").trim();
-tf_applyLatestRiskToElement(nameSpan, it.name, null, true);
+tf_applyLatestRiskToElement(nameSpan, it.name, null, true, 'left');
 cb.addEventListener("change", () => {
 sel[String(it.name)] = cb.checked;
 persistSel();
@@ -5723,7 +5727,7 @@ const nameCell = document.createElement('td');
 nameCell.textContent = formatAnalystDisplayName(a.baseName || a.name);
 nameCell.title = String(a.baseName || a.name || '').trim();
 nameCell.classList.add('monthly-sticky-col-2');
-tf_applyLatestRiskToElement(nameCell, a.baseName || a.name, a.pair || getPrimaryPairForAnalyst(a), true);
+tf_applyLatestRiskToElement(nameCell, a.baseName || a.name, a.pair || getPrimaryPairForAnalyst(a), false);
 tr.appendChild(nameCell);
 const pairCell = document.createElement('td');
 const pairText = (Array.isArray(a.pairs) && a.pairs.length)
@@ -5869,7 +5873,7 @@ span.className = 'monthly-cell-line';
 span.textContent = signals + ' Signals';
 try {
   const __riskState = tf_refreshLatestRiskState(false);
-  if (__riskState && monthKey === __riskState.monthKey) tf_applyLatestRiskToElement(span, analystName, a.pair || getPrimaryPairForAnalyst(a), true);
+  if (__riskState && monthKey === __riskState.monthKey) tf_applyLatestRiskToElement(span, analystName, a.pair || getPrimaryPairForAnalyst(a), true, 'left');
 } catch (e) { }
 lineElements.push(span);
 }
@@ -6561,9 +6565,10 @@ dateCell.classList.add('mono');
 dateCell.textContent = row.displayDate || row.createdDate || '';
 tr.appendChild(dateCell);
 const analystCell = tf_markHistoryCell(document.createElement('td'), 'analyst');
+analystCell.classList.add('tf-risk-name-left');
 analystCell.textContent = isWithdrawRow ? 'Withdraw' : formatAnalystDisplayName(row.analyst || '');
 analystCell.title = isWithdrawRow ? 'Withdraw' : String(row.analyst || '').trim();
-if (!isWithdrawRow) tf_applyLatestRiskToElement(analystCell, row.analyst || '', row.pair || '', true);
+if (!isWithdrawRow) tf_applyLatestRiskToElement(analystCell, row.analyst || '', row.pair || '', true, 'left');
 tr.appendChild(analystCell);
 const balanceCompoundCell = tf_markHistoryCell(document.createElement('td'), 'balance');
 balanceCompoundCell.classList.add('text-right', 'mono');
@@ -6770,7 +6775,7 @@ let a=avgAgg.get(k); if(!a){a={sum:0,count:0};avgAgg.set(k,a);} a.sum+=ms;a.coun
 function renderSide(tbody,subset){
 tbody.innerHTML='';
 if(!subset.length){const tr=document.createElement('tr');tr.className='tf-holding-empty-row';const td=document.createElement('td');td.colSpan=3;td.textContent=names.length?'—':'Belum ada trade yang tampil di Table 3 untuk filter aktif.';tr.appendChild(td);tbody.appendChild(tr);return;}
-subset.forEach(name=>{const tr=document.createElement('tr');const n=document.createElement('td');n.className='tf-holding-analyst';n.textContent=name;try{const sep=name.lastIndexOf(' - ');if(sep>0)tf_applyLatestRiskToElement(n,name.slice(0,sep),name.slice(sep+3),true);}catch(e){}const m=document.createElement('td');m.className='mono tf-holding-value';m.textContent=tf_formatHoldingDuration(maxBy.get(name));const a=document.createElement('td');a.className='mono tf-holding-value';const g=avgAgg.get(name);a.textContent=g&&g.count?tf_formatHoldingDuration(g.sum/g.count):'—';tr.append(n,m,a);tbody.appendChild(tr);});
+subset.forEach(name=>{const tr=document.createElement('tr');const n=document.createElement('td');n.className='tf-holding-analyst';n.textContent=name;try{const sep=name.lastIndexOf(' - ');if(sep>0)tf_applyLatestRiskToElement(n,name.slice(0,sep),name.slice(sep+3),true,'left');}catch(e){}const m=document.createElement('td');m.className='mono tf-holding-value';m.textContent=tf_formatHoldingDuration(maxBy.get(name));const a=document.createElement('td');a.className='mono tf-holding-value';const g=avgAgg.get(name);a.textContent=g&&g.count?tf_formatHoldingDuration(g.sum/g.count):'—';tr.append(n,m,a);tbody.appendChild(tr);});
 }
 const splitAt=Math.ceil(names.length/2);renderSide(leftBody,names.slice(0,splitAt));renderSide(rightBody,names.slice(splitAt));
 }
@@ -11772,8 +11777,9 @@ ctrlCell.className = 'dd-details-control';
 ctrlCell.textContent = '▶';
 tr.appendChild(ctrlCell);
 const nameCell = document.createElement('td');
+nameCell.classList.add('tf-risk-name-left');
 nameCell.textContent = name;
-if (name !== 'Withdraw') tf_applyLatestRiskToElement(nameCell, name, null, true);
+if (name !== 'Withdraw') tf_applyLatestRiskToElement(nameCell, name, null, true, 'left');
 tr.appendChild(nameCell);
 const maxProfitTradesCell = document.createElement('td');
 maxProfitTradesCell.className = 'mono tp';
@@ -14834,7 +14840,7 @@ a.setAttribute('data-analyst', name);
 a.setAttribute('href', TF_ISIGNAL_CHANNELS_URL);
 a.setAttribute('target', '_blank');
 a.setAttribute('rel', 'noopener noreferrer');
-tf_applyLatestRiskToElement(a, name, null, true);
+tf_applyLatestRiskToElement(a, name, null, true, 'left');
 wrap.appendChild(badge);
 wrap.appendChild(a);
 tdName.appendChild(wrap);
@@ -17589,7 +17595,10 @@ showError('');
       const scoreRows = body.querySelectorAll('tr.tf-score-summary-row');
       analysts.forEach((entry, idx) => {
         const cell = scoreRows[idx] ? scoreRows[idx].querySelector('.tf-score-analyst') : null;
-        if (cell) tf_applyLatestRiskToElement(cell, entry.name, null, true);
+        if (cell) {
+          cell.classList.add('tf-risk-name-left');
+          tf_applyLatestRiskToElement(cell, entry.name, null, true, 'left');
+        }
       });
     } catch (e) { }
   }
