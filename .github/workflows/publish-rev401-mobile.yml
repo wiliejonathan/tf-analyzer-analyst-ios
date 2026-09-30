@@ -1,0 +1,104 @@
+name: Publish iOS Browser REV401 JSON remembered-links restore
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'release-staging/REV401-mobile/READY'
+permissions:
+  contents: write
+concurrency:
+  group: publish-mobile-rev401
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate REV401 source
+        run: |
+          set -euo pipefail
+          node --check mobile-data-bridge.js
+          node --check assets/dashboard-mobile.js
+          node --check mobile-license-gate.js
+          node --check mobile-force-update.js
+          node --check service-worker.js
+          python3 - <<'PY'
+          from pathlib import Path
+          bridge=Path('mobile-data-bridge.js').read_text()
+          idx=Path('index.html').read_text()
+          sw=Path('service-worker.js').read_text()
+          gate=Path('mobile-license-gate.js').read_text()
+          upd=Path('mobile-force-update.js').read_text()
+          proxy=Path('activation-proxy.html').read_text()
+          dash=Path('assets/dashboard-mobile.js').read_text()
+          css=Path('assets/dashboard-original.css').read_text()
+          assert 'function tfMobileRecoverRememberedLinksV401' in bridge
+          assert 'remembered.length===0&&sources&&Object.keys(sources).length' in bridge
+          assert 'st.tfRememberedAnalystLinks=Object.keys(sources).sort().map' in bridge
+          assert 'st.tfRememberLinksEnabled=true;' in bridge
+          assert 'tfMobileRecoverRememberedLinksV401(st);' in bridge
+          assert 'function tfMobileParseImportJsonV399' in bridge
+          assert 'Data lama tidak dihapus.' in bridge
+          assert '?rev=401' in idx
+          assert 'rev401-json-link-restore' in sw
+          assert '?rev=401' in sw
+          assert "var CURRENT_TAG = 'v1.17.14';" in upd
+          assert "mobileVersion: '1.17.14'" in gate
+          assert "remoteRevision: 'REV401'" in gate
+          assert 'REV401_ANDROID_WEB_RELAY' in proxy
+          assert "mobileVersion:'1.17.14'" in proxy
+          assert "remoteRevision:'REV401'" in proxy
+          # REV400 UI fixes must remain.
+          assert 'function tf_createAnalystNameColorTarget' in dash
+          assert 'tf_renderHoldingPeriodTables(rowsForCalc);' in dash
+          assert '.tf-analyst-name-color-target' in css
+          print('REV401 mobile JSON link recovery + REV400 regression QA PASS')
+          PY
+          node - <<'NODE'
+          const st={
+            tfRememberedAnalystLinks:[],
+            tfRememberLinksEnabled:false,
+            tfAnalystSources:{
+              BHAGAWANTA2:{url:'https://account.tradersfamily.id/channels/165150',pairs:['USDJPY','EURJPY']},
+              trade07:{url:'https://account.tradersfamily.id/channels/123',pairs:['XAUUSD']}
+            }
+          };
+          const sources=st.tfAnalystSources&&typeof st.tfAnalystSources==='object'&&!Array.isArray(st.tfAnalystSources)?st.tfAnalystSources:null;
+          const remembered=Array.isArray(st.tfRememberedAnalystLinks)?st.tfRememberedAnalystLinks:[];
+          if(remembered.length===0&&sources&&Object.keys(sources).length){
+            st.tfRememberedAnalystLinks=Object.keys(sources).sort().map(name=>{
+              const src=sources[name]||{};
+              const url=String(src.url||src.link||'').trim();
+              if(!url)return null;
+              const pairs=Array.isArray(src.pairs)&&src.pairs.length?src.pairs.slice():['__ALL__'];
+              return {name:String(name||'').trim(),url,pairs};
+            }).filter(Boolean);
+          }
+          if(Array.isArray(st.tfRememberedAnalystLinks)&&st.tfRememberedAnalystLinks.length)st.tfRememberLinksEnabled=true;
+          if(st.tfRememberedAnalystLinks.length!==2||!st.tfRememberLinksEnabled)throw new Error('REV401 mobile recovery simulation failed');
+          console.log('REV401 mobile empty-link simulation PASS');
+          NODE
+      - name: Build bundle
+        run: |
+          set -euo pipefail
+          OUT=/tmp/TF_Analyzer_Analyst_iOS_BROWSER_REV401_JSON_LINK_RESTORE.zip
+          zip -qr "$OUT" . -x '.git/*' '.github/*' 'release-staging/*'
+          unzip -tq "$OUT"
+          sha256sum "$OUT" > "$OUT.sha256"
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG=v1.17.14
+          OUT=/tmp/TF_Analyzer_Analyst_iOS_BROWSER_REV401_JSON_LINK_RESTORE.zip
+          NOTES=release-staging/REV401-mobile/RELEASE_NOTES.md
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --target "$GITHUB_SHA" --title 'TF Analyzer Analyst V1.17.14 - REV401 JSON Link Restore' --notes-file "$NOTES" --latest
+            gh release upload "$TAG" "$OUT" "$OUT.sha256" --clobber
+          else
+            gh release create "$TAG" "$OUT" "$OUT.sha256" --target "$GITHUB_SHA" --title 'TF Analyzer Analyst V1.17.14 - REV401 JSON Link Restore' --notes-file "$NOTES" --latest
+          fi
