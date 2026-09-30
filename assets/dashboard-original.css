@@ -286,3 +286,55 @@ html:not([data-tf-server-authorized="1"])body{overflow:hidden!important;backgrou
 #history-table tbody tr.tf-history-row-pnl-negative > td[data-history-col="analyst"].tf-latest-risk-critical{
   color:#ef4444 !important;
 }
+
+
+
+/* REV396 — force analyst-name color parity on every requested surface. */
+#summary-table tbody td.tf-latest-risk-healthy,
+#monthly-table tbody td.tf-latest-risk-healthy,
+.tf-perf-name-text.tf-latest-risk-healthy,
+.tf-holding-analyst.tf-latest-risk-healthy,
+#history-table tbody td[data-history-col="analyst"].tf-latest-risk-healthy,
+#drawdown-table tbody td.tf-latest-risk-healthy,
+.tf-score-summary-table tbody .tf-score-analyst.tf-latest-risk-healthy,
+.tf-isignal-analyst-name.tf-latest-risk-healthy,
+.tf-users-analyst-link.tf-latest-risk-healthy{
+  color:#22c55e !important;
+}
+#summary-table tbody td.tf-latest-risk-warning,
+#monthly-table tbody td.tf-latest-risk-warning,
+.tf-perf-name-text.tf-latest-risk-warning,
+.tf-holding-analyst.tf-latest-risk-warning,
+#history-table tbody td[data-history-col="analyst"].tf-latest-risk-warning,
+#drawdown-table tbody td.tf-latest-risk-warning,
+.tf-score-summary-table tbody .tf-score-analyst.tf-latest-risk-warning,
+.tf-isignal-analyst-name.tf-latest-risk-warning,
+.tf-users-analyst-link.tf-latest-risk-warning{
+  color:#facc15 !important;
+}
+#summary-table tbody td.tf-latest-risk-critical,
+#monthly-table tbody td.tf-latest-risk-critical,
+.tf-perf-name-text.tf-latest-risk-critical,
+.tf-holding-analyst.tf-latest-risk-critical,
+#history-table tbody td[data-history-col="analyst"].tf-latest-risk-critical,
+#drawdown-table tbody td.tf-latest-risk-critical,
+.tf-score-summary-table tbody .tf-score-analyst.tf-latest-risk-critical,
+.tf-isignal-analyst-name.tf-latest-risk-critical,
+.tf-users-analyst-link.tf-latest-risk-critical{
+  color:#ef4444 !important;
+}
+
+/* Table 3: every visible data value follows PnL % sign, including nested text.
+   Nama Analis is excluded because it follows the risk icon state above. */
+#history-table tbody tr.tf-history-row-pnl-positive > td:not([data-history-col="analyst"]),
+#history-table tbody tr.tf-history-row-pnl-positive > td:not([data-history-col="analyst"]) *{
+  color:var(--success) !important;
+}
+#history-table tbody tr.tf-history-row-pnl-negative > td:not([data-history-col="analyst"]),
+#history-table tbody tr.tf-history-row-pnl-negative > td:not([data-history-col="analyst"]) *{
+  color:var(--danger) !important;
+}
+/* Keep checkbox itself visually normal. */
+#history-table tbody .tf-history-cb-cell input{
+  color:initial !important;
+}
