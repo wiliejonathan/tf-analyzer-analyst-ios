@@ -81,13 +81,13 @@
 
     // Preserve the exact REV224 performance DOM and all bound IDs.
     section.appendChild(perf);
-    tf_ensureBalanceCards414(section);
 
     const host = q('tf-dashboard-main') || document.querySelector('.page') || document.body;
     const table2 = q('section-monthly');
     if(table2 && table2.parentNode) table2.parentNode.insertBefore(section, table2);
     else host.appendChild(section);
 
+    tf_ensureBalanceCards414(section);
     return section;
   }
 
