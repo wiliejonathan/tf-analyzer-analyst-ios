@@ -18,7 +18,7 @@ const flow=await page.evaluate(()=>{
  select('Test 0').click();record('A');select('Test 1').click();record('AB');select('Test 0').click();record('B');
  return result;
 });
-assert.equal(flow[0].points,0);assert.deepEqual(flow[1].analysts,['Test 0']);assert.deepEqual(flow[2].analysts.sort(),['Test 0','Test 1']);assert.deepEqual(flow[3].analysts,['Test 1']);assert.equal(flow[3].range,'all');assert.equal(flow[3].last,flow[3].end);assert.ok(flow[3].count>2);await page.waitForTimeout(1200);assert.equal(await page.evaluate(()=>tfEquityAnimation412),null);await page.evaluate(()=>drawEquityCurve());
+assert.equal(flow[0].points,0);assert.deepEqual(flow[1].analysts,['Test 0']);assert.deepEqual(flow[2].analysts.sort(),['Test 0','Test 1']);assert.deepEqual(flow[3].analysts,['Test 1']);assert.equal(flow[3].range,'all');assert.equal(flow[3].last,flow[3].end);assert.ok(flow[3].count>2);await page.waitForTimeout(2450);assert.equal(await page.evaluate(()=>tfEquityAnimation412),null);await page.evaluate(()=>drawEquityCurve());
 console.log('Actual checkbox selection → chart → Performance cards PASS',JSON.stringify(flow));
 console.log(JSON.stringify(result));
 }catch(e){throw e}finally{await browser.close()}})().catch(e=>{console.error(e);process.exit(1)});

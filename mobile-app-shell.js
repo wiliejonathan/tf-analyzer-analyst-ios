@@ -71,7 +71,7 @@
   function q(id){ return document.getElementById(id); }
 
   function createPerformanceScreen(){
-    if(q('tf-mobile-performance-screen')) return q('tf-mobile-performance-screen');
+    if(q('tf-mobile-performance-screen')) { tf_ensureBalanceCards414(q('tf-mobile-performance-screen')); return q('tf-mobile-performance-screen'); }
     const perf = q('tf-perf-wrap');
     if(!perf) return null;
 
@@ -81,6 +81,7 @@
 
     // Preserve the exact REV224 performance DOM and all bound IDs.
     section.appendChild(perf);
+    tf_ensureBalanceCards414(section);
 
     const host = q('tf-dashboard-main') || document.querySelector('.page') || document.body;
     const table2 = q('section-monthly');
@@ -1457,6 +1458,8 @@
       setTimeout(scrollTable3ToLatestOnce, 90);
       setTimeout(scrollTable3ToLatestOnce, 320);
     }
+
+    if(key === 'equity'){ requestAnimationFrame(() => tf_animateEquity412()); }
 
     if(key === 'performance'){
       setTimeout(refreshPerformanceLayoutV17,0);

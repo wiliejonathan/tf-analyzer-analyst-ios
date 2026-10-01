@@ -9246,3 +9246,10 @@ body.tf-risk-explainer-open{overflow:hidden!important;}
 #tf-table1-analytics-filter .tf-time-range-row{width:100%;}
 #tf-table1-analytics-filter label{font-size:11px!important;color:#94a3b8;}
 #tf-table1-analytics-filter select{flex:1;min-width:160px;max-width:100%;min-height:36px;}
+
+/* REV414: balance cards remain visible independently of analyst-table state. */
+#tf-mobile-performance-screen > #tf-balance-cards412{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;width:100%!important;max-width:100%!important;min-width:0;gap:10px;margin:12px 0 14px;box-sizing:border-box;}
+#tf-mobile-performance-screen > #tf-balance-cards412 .tf-balance-card412{min-width:0;padding:12px;border-radius:12px;}
+#tf-mobile-performance-screen > #tf-balance-cards412 .tf-balance-label412{font-size:12px;margin-bottom:7px;}
+#tf-mobile-performance-screen > #tf-balance-cards412 .tf-balance-value412{font-size:clamp(18px,4.5vw,25px);overflow-wrap:anywhere;line-height:1.25;}
+@media(min-width:700px){#tf-mobile-performance-screen > #tf-balance-cards412{grid-template-columns:repeat(4,minmax(0,1fr))!important;}}

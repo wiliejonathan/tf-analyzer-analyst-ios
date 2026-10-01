@@ -13207,8 +13207,10 @@ cont.appendChild(b);
 function tf_setTradeTimeRange(key) {
 const next = tf_getRangeOptByKey(key).key;
 const hadSingleMonth = !!tfTradeSingleMonthKey;
-if (next === tfTradeTimeRangeKey && !hadSingleMonth)
+if (next === tfTradeTimeRangeKey && !hadSingleMonth) {
+tf_animateEquity412();
 return;
+}
 if (hadSingleMonth) {
 tfTradeSingleMonthKey = '';
 tf_saveSingleMonthPreference();
@@ -17866,22 +17868,87 @@ function tf_cancelEquityAnimation412() {
 }
 function tf_animateEquity412() {
   tf_cancelEquityAnimation412();
-  if (equityChartMode !== 'line' || window.matchMedia('(prefers-reduced-motion: reduce)').matches || document.hidden) {
+  const canvas = document.getElementById('equity-curve-canvas');
+  if (equityChartMode !== 'line' || window.matchMedia('(prefers-reduced-motion: reduce)').matches || document.hidden || !canvas || !canvas.parentElement || !canvas.parentElement.clientWidth || !equityCurvePoints.length) {
     drawEquityCurve(); return;
   }
-  const animation = { start: performance.now(), progress: 0 };
+  // Cache the grid and complete line once. ALL has the same smooth transition
+  // as short ranges without recalculating thousands of chart points each frame.
+  const animation = { start: null, progress: 0, duration: 2200 };
   tfEquityAnimation412 = animation;
-  const step = now => {
-    if (tfEquityAnimation412 !== animation) return;
-    const t = Math.min(1, (now - animation.start) / 900);
-    animation.progress = t * t * (3 - 2 * t);
-    drawEquityCurve();
-    if (t < 1) tfEquityAnimationFrame412 = requestAnimationFrame(step);
-    else { tfEquityAnimation412 = null; tfEquityAnimationFrame412 = 0; }
+  const snapshot = () => {
+    const layer = document.createElement('canvas');
+    layer.width = canvas.width; layer.height = canvas.height;
+    layer.getContext('2d').drawImage(canvas, 0, 0);
+    return layer;
   };
-  tfEquityAnimationFrame412 = requestAnimationFrame(step);
+  try {
+    drawEquityCurve();
+    const background = snapshot();
+    animation.progress = 1;
+    drawEquityCurve();
+    const complete = snapshot();
+    animation.progress = 0;
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const left = 48 * dpr;
+    const right = Math.max(left, complete.width - tf_getEquityPaddingRight() * dpr);
+    const paint = progress => {
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(background, 0, 0);
+      const revealWidth = progress >= 1 ? complete.width : Math.min(complete.width, left + (right - left) * progress);
+      if (revealWidth > 0) ctx.drawImage(complete, 0, 0, revealWidth, complete.height, 0, 0, revealWidth, complete.height);
+      ctx.restore();
+    };
+    paint(0);
+    const step = now => {
+      if (tfEquityAnimation412 !== animation) return;
+      if (canvas.width !== complete.width || canvas.height !== complete.height) {
+        tf_cancelEquityAnimation412(); drawEquityCurve(); return;
+      }
+      // Start at the first visible frame, after summary/ALL computation finishes.
+      if (animation.start === null) animation.start = now;
+      const t = Math.max(0, Math.min(1, (now - animation.start) / animation.duration));
+      animation.progress = t * t * (3 - 2 * t);
+      paint(animation.progress);
+      if (t < 1) tfEquityAnimationFrame412 = requestAnimationFrame(step);
+      else { tfEquityAnimation412 = null; tfEquityAnimationFrame412 = 0; }
+    };
+    tfEquityAnimationFrame412 = requestAnimationFrame(step);
+  } catch (error) {
+    tf_cancelEquityAnimation412(); drawEquityCurve();
+  }
 }
+
+function tf_ensureBalanceCards414(screen) {
+  const perf = document.getElementById('tf-perf-wrap');
+  if (!perf) return;
+  let host = document.getElementById('tf-balance-cards412');
+  if (!host) {
+    host = document.createElement('div'); host.id = 'tf-balance-cards412';
+    host.className = 'tf-balance-cards412'; host.setAttribute('aria-label', 'Ringkasan balance'); host.setAttribute('aria-live', 'polite');
+    perf.insertBefore(host, document.getElementById('tf-perf-overall') || perf.firstChild);
+  }
+  if (screen) {
+    const head = perf.querySelector('.tf-perf-head');
+    const range = document.getElementById('tf-time-range-row-perf');
+    // Cards are an independent part of the Performance screen, including an
+    // empty dataset and a render that hides the legacy analyst-table wrapper.
+    if (head) screen.insertBefore(head, perf);
+    screen.insertBefore(host, perf);
+    if (range) screen.insertBefore(range, perf);
+  }
+  if (!host.children.length) {
+    const state = window.__tfBalanceCardsState414;
+    if (state) tf_renderBalanceCards412(state.saldo, state.equity, state.busy);
+    else tf_renderBalanceCards412(Number(currentBalance) || 0, null, false);
+  }
+}
+
 function tf_renderBalanceCards412(saldo, equity, busy) {
+  window.__tfBalanceCardsState414 = {saldo, equity, busy};
   const host = document.getElementById('tf-balance-cards412');
   if (!host) return;
   const valid = Number.isFinite(equity), pnl = valid ? equity - saldo : null;
@@ -17933,6 +18000,7 @@ function tf_showIsignalExplanation412() {
   button.focus();
 }
 function tf_initPresentation412() {
+  tf_ensureBalanceCards414();
   tf_showIsignalExplanation412();
   if (!document.getElementById('tf-users-mgmt-table')) return;
   const refresh = () => {
