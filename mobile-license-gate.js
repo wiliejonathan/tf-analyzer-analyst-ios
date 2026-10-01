@@ -4,16 +4,16 @@
   const API_BASE = 'https://tf-license-device-api.wiliejonathan1999.workers.dev';
   const LICENSE_ENDPOINT_POINTER_URL = 'https://raw.githubusercontent.com/wiliejonathan/tf-analyzer-admin/main/license-endpoint.json';
   const LICENSE_DIRECT_FALLBACK_URL = 'https://script.google.com/macros/s/AKfycbzUbx40vGvuCS4hQEOdfs-DeSU_TY-9zWXXPZzOKn3D9h0m5pQQYD6GGNCefufvsrv2eA/exec';
-  const LICENSE_ANDROID_RELAY_URL = 'https://wiliejonathan.github.io/tf-analyzer-analyst-ios/activation-proxy.html?rev=414';
+  const LICENSE_ANDROID_RELAY_URL = 'https://wiliejonathan.github.io/tf-analyzer-analyst-ios/activation-proxy.html?rev=415';
   const LICENSE_WATCH_MS = 60000;
   // Keep the REV351 key so users who already activated on v1.16.67 migrate automatically.
   const AUTH_KEY = 'tfMobileRememberedLicenseV351';
   const APP_SCRIPTS = [
-    'mobile-chrome-shim.js?rev=414',
-    'assets/dashboard-mobile.js?rev=414',
-    'mobile-data-bridge.js?rev=414',
-    'mobile-app-shell.js?rev=414',
-    'mobile-remote.js?rev=414'
+    'mobile-chrome-shim.js?rev=415',
+    'assets/dashboard-mobile.js?rev=415',
+    'mobile-data-bridge.js?rev=415',
+    'mobile-app-shell.js?rev=415',
+    'mobile-remote.js?rev=415'
   ];
 
   // REV408: one transport request per credential/path, shared by boot/watch.
@@ -257,8 +257,8 @@
           deviceType: 'MOBILE',
           clientType: 'MOBILE',
           mobilePlatform: platformName(),
-          mobileVersion: '1.17.27',
-          remoteRevision: 'REV414',
+          mobileVersion: '1.17.28',
+          remoteRevision: 'REV415',
           requestNonce: String(Date.now()) + '-' + Math.random().toString(36).slice(2)
         })
       });
