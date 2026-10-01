@@ -470,3 +470,8 @@ body.tf-risk-explainer-open{overflow:hidden!important;}
 .tf-balance-pips415{font-size:12px;line-height:1.4;margin-top:5px;opacity:.9;color:inherit;}
 .tf-balance-pips415.neg{color:#ff5d6c;}.tf-balance-pips415.pos{color:#3ddc97;}
 @media(max-width:600px){.tf-user-adjustment415{padding:10px;margin:14px 0;}}
+
+/* REV417: title, balance cards, metric controls, analyst filter, existing range. */
+.tf-perf-head{display:block;min-width:0;}
+.tf-perf-head>.tf-balance-cards412{width:100%;box-sizing:border-box;margin:12px 0 14px;}
+.tf-perf-head>.tf-analyst-filter415{width:100%;margin:12px 0 6px;}
