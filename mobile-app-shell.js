@@ -70,8 +70,16 @@
 
   function q(id){ return document.getElementById(id); }
 
+  function ensurePerformanceLayout419(screen){
+    if(!screen) return;
+    tf_ensureBalanceCards414(screen);
+    const analytics = q('tf-holding-period-section');
+    // Move the existing section with its bound filters and table listeners intact.
+    if(analytics && analytics.parentElement !== screen) screen.appendChild(analytics);
+  }
+
   function createPerformanceScreen(){
-    if(q('tf-mobile-performance-screen')) { tf_ensureBalanceCards414(q('tf-mobile-performance-screen')); return q('tf-mobile-performance-screen'); }
+    if(q('tf-mobile-performance-screen')) { ensurePerformanceLayout419(q('tf-mobile-performance-screen')); return q('tf-mobile-performance-screen'); }
     const perf = q('tf-perf-wrap');
     if(!perf) return null;
 
@@ -87,7 +95,7 @@
     if(table2 && table2.parentNode) table2.parentNode.insertBefore(section, table2);
     else host.appendChild(section);
 
-    tf_ensureBalanceCards414(section);
+    ensurePerformanceLayout419(section);
     return section;
   }
 
@@ -1462,6 +1470,7 @@
     if(key === 'equity'){ requestAnimationFrame(() => tf_animateEquity412()); }
 
     if(key === 'performance'){
+      ensurePerformanceLayout419(q('tf-mobile-performance-screen'));
       setTimeout(refreshPerformanceLayoutV17,0);
       setTimeout(refreshPerformanceLayoutV17,100);
       setTimeout(refreshPerformanceLayoutV17,360);

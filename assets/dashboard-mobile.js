@@ -17951,7 +17951,8 @@ function tf_ensureBalanceCards414(screen) {
 
     if (range) screen.insertBefore(range, perf);
   }
-  if (!host.children.length) {
+  host.hidden = false;
+  if (host.children.length !== 4) {
     const state = window.__tfBalanceCardsState414;
     if (state) tf_renderBalanceCards412(state.saldo, state.equity, state.busy, state.pips);
     else tf_renderBalanceCards412(Number(currentBalance) || 0, null, false);
