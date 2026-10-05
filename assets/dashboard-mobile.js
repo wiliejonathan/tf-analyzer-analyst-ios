@@ -4496,7 +4496,7 @@ groups.get(key).rows.push({ ts, pips });
 }
 groups.forEach((g, key) => {
 g.rows.sort((a,b) => a.ts - b.ts);
-// REV433: reference history excludes all four newest calendar months.
+// REV434: reference history excludes all four newest calendar months.
 const recentRow=r=>{const month=tf_latestRiskMonthKey(r.ts);return month>=windowStartMonth&&month<=latestMonth;};
 function metrics(rows){
   let cumulative=0,peak=0,maxDd=0,lossCount=0,lossPips=0,maxLossStreak=0;const streaks=[],drawdowns=[];
