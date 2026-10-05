@@ -10416,6 +10416,7 @@ metaCells.push(tf_xlsxCellXml(2, 5, Number.isFinite(Number(opts.startBalance)) ?
 }
 sheetRows.push(tf_xlsxRowXml(2, metaCells, { height: 20 }));
 sheetRows.push(tf_xlsxRowXml(3, [tf_xlsxCellXml(3, 0, 'Export mengikuti Time Range / filter tanggal, filter analis & pair, Risk Mode, checkbox trade aktif, serta pilihan kolom Table 3 saat tombol Excel ditekan.', 11)], { height: 32 }));
+const exportColorStyles=[];const exportColorStyleMap=new Map();
 const headerCells = defs.map((col, index) => tf_xlsxCellXml(headerRow, index, col.header, 3));
 sheetRows.push(tf_xlsxRowXml(headerRow, headerCells, { height: 30 }));
 rows.forEach((row, rowIndex) => {
@@ -10431,6 +10432,8 @@ if (col.key === 'pnlPips') style = value > 0 ? 12 : (value < 0 ? 13 : 7);
 else if (col.key === 'pnlDollar' || col.key === 'pnlDollarNet' || col.key === 'swapDollar' || col.key === 'commDollar') style = value > 0 ? 14 : (value < 0 ? 15 : 8);
 else if (col.key === 'pnlPercent' || col.key === 'pnlPercentNet') style = value > 0 ? 16 : (value < 0 ? 17 : 9);
 }
+const colors=tf_table3ExportColors445(row);const color=col.key==='analyst'?(colors.analyst||colors.row):colors.row;
+const token=style+'|'+color;if(!exportColorStyleMap.has(token)){exportColorStyleMap.set(token,18+exportColorStyles.length);exportColorStyles.push({base:style,color});}style=exportColorStyleMap.get(token);
 return tf_xlsxCellXml(excelRow, colIndex, value, style);
 });
 sheetRows.push(tf_xlsxRowXml(excelRow, cells, { height: 18 }));
@@ -10451,7 +10454,7 @@ mergeXml +
 '<pageMargins left="0.3" right="0.3" top="0.5" bottom="0.5" header="0.2" footer="0.2"/>' +
 '<pageSetup orientation="landscape" fitToWidth="1" fitToHeight="0"/>' +
 '</worksheet>';
-const stylesXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+let stylesXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
 '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
 '<numFmts count="4"><numFmt numFmtId="164" formatCode="0.0"/><numFmt numFmtId="165" formatCode="$#,##0.00;[Red]-$#,##0.00"/><numFmt numFmtId="166" formatCode="0.00&quot;%&quot;"/><numFmt numFmtId="167" formatCode="0.########"/></numFmts>' +
 '<fonts count="6"><font><sz val="10"/><name val="Calibri"/></font><font><b/><sz val="10"/><name val="Calibri"/></font><font><b/><sz val="15"/><name val="Calibri"/><color rgb="FF0F172A"/></font><font><b/><sz val="10"/><name val="Calibri"/><color rgb="FFFFFFFF"/></font><font><sz val="10"/><name val="Calibri"/><color rgb="FF16A34A"/></font><font><sz val="10"/><name val="Calibri"/><color rgb="FFDC2626"/></font></fonts>' +
@@ -10481,6 +10484,10 @@ const stylesXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
 '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>' +
 '<dxfs count="0"/>' +
 '</styleSheet>';
+const baseXfs=stylesXml.match(/<cellXfs[^>]*>(.*?)<\/cellXfs>/s)[1].match(/<xf\b[^>]*(?:\/>|>.*?<\/xf>)/gs);
+const extraFonts=exportColorStyles.map(x=>'<font><sz val="10"/><name val="Calibri"/><color rgb="FF'+x.color.slice(1).toUpperCase()+'"/></font>').join('');
+const extraXfs=exportColorStyles.map((x,i)=>baseXfs[x.base].replace(/fontId="\d+"/,'fontId="'+(6+i)+'"').replace(/ applyFont="1"/g,'').replace('<xf ','<xf applyFont="1" ')).join('');
+stylesXml=stylesXml.replace('<fonts count="6">','<fonts count="'+(6+exportColorStyles.length)+'">').replace('</fonts>',extraFonts+'</fonts>').replace('<cellXfs count="18">','<cellXfs count="'+(18+exportColorStyles.length)+'">').replace('</cellXfs>',extraXfs+'</cellXfs>');
 const contentTypes = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
 '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
 '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
@@ -10512,6 +10519,14 @@ const entries = [
 ];
 return tf_xlsxZipStore(entries, opts.now instanceof Date ? opts.now : new Date());
 }
+
+function tf_table3ExportColors445(row){
+ const negative=!!row?.isWithdraw||Number(row?.pnlDollar)<0;
+ const colors={row:negative?'#f97373':'#4ade80'};
+ if(!row?.isWithdraw){const risk=tf_getLatestRiskState(row?.analyst,row?.pair);if(risk)colors.analyst=risk.severity>=2?'#ef4444':risk.severity===1?'#facc15':'#22c55e';}
+ return colors;
+}
+
 async function exportHistoryToExcel() {
 if (!lastHistoryRowsForExport || !Array.isArray(lastHistoryRowsForExport) || lastHistoryRowsForExport.length === 0) {
 alert('Table 3 masih kosong. Silakan Import data dulu.');
@@ -10606,6 +10621,7 @@ startBalance: (typeof currentBalance === 'number' && isFinite(currentBalance)) ?
 startBalanceLabel: (rm === 'compound') ? 'Start Balance Compounded' : 'Start Balance',
 visibleColumns: tf_getVisibleHistoryColumnKeys(),
 rows: lastHistoryRowsForExport.map((r) => ({
+textColors: tf_table3ExportColors445(r),
 createdDate: r && r.createdDate != null ? r.createdDate : '',
 displayDate: r && r.displayDate != null ? r.displayDate : '',
 analyst: r && r.analyst != null ? r.analyst : '',
@@ -17960,6 +17976,15 @@ function tf_ensureBalanceCards414(screen) {
   }
 }
 
+function tf_cardDuration446(start,end){
+ const parse=x=>{if(!/^\d{4}-\d{2}-\d{2}$/.test(x||''))return null;const [y,m,d]=x.split('-').map(Number);return new Date(Date.UTC(y,m-1,d));};
+ const a=parse(start),b=parse(end);if(!a||!b||b<a)return '—';
+ const shift=months=>{const first=new Date(Date.UTC(a.getUTCFullYear(),a.getUTCMonth()+months,1));return new Date(Date.UTC(first.getUTCFullYear(),first.getUTCMonth(),Math.min(a.getUTCDate(),new Date(Date.UTC(first.getUTCFullYear(),first.getUTCMonth()+1,0)).getUTCDate())));};
+ let months=(b.getUTCFullYear()-a.getUTCFullYear())*12+b.getUTCMonth()-a.getUTCMonth();if(shift(months)>b)months--;
+ const years=Math.floor(months/12),remainingMonths=months%12;let days=Math.round((b-shift(months))/86400000);const weeks=days>=14?Math.floor(days/7):0;if(weeks)days%=7;
+ return [[years,'Years'],[remainingMonths,'Months'],[weeks,'Weeks'],[days,'Days']].filter(x=>x[0]).map(x=>x[0]+' '+x[1]).join(' - ')||'0 Days';
+}
+
 function tf_renderBalanceCards412(saldo, equity, busy, pips = null) {
   window.__tfBalanceCardsState414 = {saldo, equity, busy, pips};
   const host = document.getElementById('tf-balance-cards412');
@@ -17967,12 +17992,14 @@ function tf_renderBalanceCards412(saldo, equity, busy, pips = null) {
   const valid = Number.isFinite(equity), pnl = valid ? equity - saldo : null;
   const pct = valid && saldo !== 0 ? pnl / Math.abs(saldo) * 100 : null;
   const money = n => (n < 0 ? '-$' : '$') + Math.abs(n).toLocaleString('en-US', {maximumFractionDigits: 2});
+  const dateStart445=formatDateInputFromSortKey(equityFilterStart),dateEnd445=formatDateInputFromSortKey(equityFilterEnd);
+  const dateRange445=dateStart445&&dateEnd445?dateStart445+' - '+dateEnd445:'—';
   const values = [saldo, equity, pnl, pct], labels = ['Saldo', 'Equity $', 'PnL $', 'PnL %'];
   host.innerHTML = labels.map((label, i) => {
     const n = values[i], known = Number.isFinite(n);
     const text = busy ? 'Memuat…' : !known ? '—' : (i >= 2 && n > 0 ? '+' : '') + (i === 3 ? n.toFixed(2) + '%' : money(n));
     const state = !busy && known && n < 0 ? 'neg' : !busy && known && i >= 2 && n > 0 ? 'pos' : '';
-    return '<div class="tf-balance-card412 ' + state + '"><div class="tf-balance-label412">' + label + '</div><div class="tf-balance-value412">' + text + '</div>' + (i === 2 ? '<div class="tf-balance-pips415 ' + (Number.isFinite(pips) && pips < 0 ? 'neg' : Number.isFinite(pips) && pips > 0 ? 'pos' : '') + '">' + (!Number.isFinite(pips) ? '— pips' : (pips > 0 ? '+' : '') + pips.toLocaleString('en-US', {maximumFractionDigits: 2}) + ' pips') + '</div>' : '') + '</div>';
+    return '<div class="tf-balance-card412 ' + state + '"><div class="tf-balance-label412">' + label + '</div><div class="tf-balance-value412">' + text + '</div>' + (i <= 1 ? '<div class="tf-equity-date-range445" style="font-size:10px;color:#94a3b8;margin-top:6px">'+(i===0?('Start date : '+(dateStart445?dateStart445.split('-').reverse().join('-'):'—')):('End Date : '+(dateEnd445?dateEnd445.split('-').reverse().join('-'):'—')))+'</div>' : '') + (i === 3 ? '<div class="tf-pnl-duration446" style="font-size:10px;color:#94a3b8;margin-top:6px">Durasi : '+tf_cardDuration446(dateStart445,dateEnd445)+'</div>' : '') + (i === 2 ? '<div class="tf-balance-pips415 ' + (Number.isFinite(pips) && pips < 0 ? 'neg' : Number.isFinite(pips) && pips > 0 ? 'pos' : '') + '">' + (!Number.isFinite(pips) ? '— pips' : (pips > 0 ? '+' : '') + pips.toLocaleString('en-US', {maximumFractionDigits: 2}) + ' pips') + '</div>' : '') + '</div>';
   }).join('');
 }
 function tf_subscriptionStatus412(text, now = Date.now()) {

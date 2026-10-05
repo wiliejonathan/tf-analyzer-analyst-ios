@@ -1,0 +1,63 @@
+html:not([data-tf-integrity="ok"]) body{overflow:hidden!important;background:#fff!important;}
+:root{color-scheme:light;}
+body{font-family:Arial,Helvetica,sans-serif;margin:16px;background:#fff;color:#111;}
+.toolbar{display:flex;gap:10px;align-items:center;justify-content:flex-end;margin-bottom:10px;position:sticky;top:0;background:rgba(255,255,255,.96);padding:6px 0;z-index:20;}
+.btn{padding:8px 12px;border:1px solid #999;border-radius:8px;background:#f5f5f5;cursor:pointer;font-size:13px;}
+.btn:disabled{opacity:.55;cursor:not-allowed;}
+.btn:active:not(:disabled){transform:translateY(1px);}
+h1{font-size:16px;margin:6px 0 8px;text-align:center;}
+.note{font-size:12px;color:#444;margin-bottom:4px;text-align:center;}
+.export-progress{font-size:11px;color:#64748b;text-align:center;margin:0 0 10px;min-height:14px;}
+#table-wrap{width:100%;}
+.tf-export-year{width:100%;margin:0 0 14px;}
+.tf-export-year+.tf-export-year{margin-top:18px;}
+.tf-export-year-title{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:0 0 6px;padding:5px 7px;border-top:2px solid #334155;border-bottom:1px solid #cbd5e1;background:#f8fafc;}
+.tf-export-year-name{font-size:11px;font-weight:800;letter-spacing:.35px;}
+.tf-export-year-meta{font-size:8px;color:#64748b;white-space:nowrap;}
+.tf-export-month{width:100%;margin:0 0 11px;content-visibility:auto;contain:layout style;contain-intrinsic-size:auto 560px;}
+.tf-export-month+.tf-export-month{margin-top:10px;}
+.tf-export-month-title{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:0 0 3px;padding:2px 4px;border-left:3px solid #64748b;background:#fafafa;}
+.tf-export-month-name{font-size:9px;font-weight:800;}
+.tf-export-month-meta{font-size:7.5px;color:#64748b;white-space:nowrap;}
+.tf-export-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:7.2px;line-height:1.15;}
+.tf-export-table th,.tf-export-table td{border:1px solid #bbb;padding:2.5px 3px;text-align:center;vertical-align:middle;white-space:normal;overflow-wrap:anywhere;word-break:normal;}
+.tf-export-table th{background:#f2f2f2;font-weight:700;line-height:1.1;}
+.tf-export-table .tf-start-balance-row td{font-weight:700;padding:4px 5px;background:#f8fafc;text-align:left;}
+.tf-export-table .tf-withdraw-row td{background:#fff7ed;}
+.tf-export-table .tf-month-total-row td{background:#eef2f7;border-top:1.5px solid #64748b;font-weight:800;padding-top:3.5px;padding-bottom:3.5px;}
+.tf-export-table .tf-month-total-label{text-align:left!important;font-family:Arial,Helvetica,sans-serif;font-size:6.9px;letter-spacing:.12px;color:#334155;white-space:nowrap;}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;}
+.tp{color:#0a7a0a;font-weight:700;}
+.sl{color:#b00020;font-weight:700;}
+.neutral{color:#111;}
+.type-buy{color:#0a7a0a;font-weight:700;}
+.type-sell{color:#b00020;font-weight:700;}
+.tf-copyright-footer{margin-top:14px;padding-top:10px;border-top:1px solid rgba(0,0,0,.18);font-size:11px;text-align:center;color:rgba(0,0,0,.60);letter-spacing:.15px;}
+.tf-copyright-footer a{color:inherit;text-decoration:none;border-bottom:1px dotted rgba(0,0,0,.25);}
+.tf-license-watermark{position:fixed;left:10px;right:10px;bottom:5px;text-align:center;font-size:8px;color:rgba(17,24,39,.50);letter-spacing:.15px;pointer-events:none;}
+@media print{
+  @page{size:A4 landscape;margin:8mm;}
+  body{margin:0;padding-bottom:16px;}
+  .toolbar,.export-progress,.tf-copyright-footer{display:none!important;}
+  h1{margin:0 0 5px;font-size:13px;}
+  .note{font-size:8px;margin-bottom:4px;}
+  .tf-export-year{margin:0 0 3.5mm;}
+  .tf-export-year+.tf-export-year{margin-top:5mm;}
+  .tf-export-year-title{margin:0 0 2mm;padding:1.4mm 1.8mm;break-after:avoid-page;page-break-after:avoid;}
+  .tf-export-year-name{font-size:8px;}
+  .tf-export-year-meta{font-size:6.5px;}
+  .tf-export-month{content-visibility:visible!important;contain:none!important;margin:0 0 3mm;break-inside:auto;page-break-inside:auto;}
+  .tf-export-month+.tf-export-month{margin-top:2.5mm;}
+  .tf-export-month-title{margin:0 0 1mm;padding:.8mm 1.2mm;break-after:avoid-page;page-break-after:avoid;}
+  .tf-export-month-name{font-size:7px;}
+  .tf-export-month-meta{font-size:6px;}
+  .tf-export-table{table-layout:fixed;font-size:6.8px;}
+  .tf-export-table thead{display:table-header-group;}
+  .tf-export-table tr{break-inside:avoid;page-break-inside:avoid;}
+  .tf-export-table th,.tf-export-table td{padding:2px 2.5px;}
+  .tf-export-table .tf-month-total-row td{padding-top:2.2px;padding-bottom:2.2px;}
+  .tf-license-watermark{display:block;}
+}
+
+/* REV447 export colour preservation */
+.tf-export-table{-webkit-print-color-adjust:exact;print-color-adjust:exact}

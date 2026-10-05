@@ -475,3 +475,6 @@ body.tf-risk-explainer-open{overflow:hidden!important;}
 .tf-perf-head{display:block;min-width:0;}
 .tf-perf-head>.tf-balance-cards412{width:100%;box-sizing:border-box;margin:12px 0 14px;}
 .tf-perf-head>.tf-analyst-filter415{width:100%;margin:12px 0 6px;}
+
+/* REV447 duration colour */
+.tf-balance-card412.pos .tf-pnl-duration446{color:#22c55e!important}.tf-balance-card412.neg .tf-pnl-duration446{color:#f87171!important}
