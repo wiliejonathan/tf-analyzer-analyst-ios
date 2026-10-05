@@ -32,7 +32,7 @@ jobs:
           node --test tests/equity412.cjs
           node --test tests/animation414.cjs
           npm install --no-save playwright
-          TF_BROWSER_CHANNEL=chrome node tests/mobile433.cjs
+          TF_BROWSER_CHANNEL=chrome node tests/mobile419.cjs
           TF_BROWSER_CHANNEL=chrome node tests/chart417.cjs
           TF_BROWSER_CHANNEL=chrome node tests/adjustment418.cjs
           node --test tests/risk433.cjs
