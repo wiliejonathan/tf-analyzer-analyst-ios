@@ -174,7 +174,7 @@ noteEl.style.whiteSpace = 'pre-line';
 noteEl.textContent = owners.map((owner, index) => {
 const namePart = owner.name ? String(owner.name).trim() : '';
 const emailPart = owner.email ? String(owner.email).trim() : '';
-return 'Scanned by ' + tfOwnerAlphabetLabel(index) + ' : ' + namePart + (emailPart ? ' | ' + emailPart : '');
+return 'Scanned by : ' + namePart + (emailPart ? ' | ' + emailPart : '');
 }).join('\n');
 });
 }
@@ -10484,8 +10484,8 @@ let stylesXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
 '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>' +
 '<dxfs count="0"/>' +
 '</styleSheet>';
-const baseXfs=stylesXml.match(/<cellXfs[^>]*>(.*?)<\/cellXfs>/s)[1].match(/<xf\b[^>]*(?:\/>|>.*?<\/xf>)/gs);
-const extraFonts=exportColorStyles.map(x=>'<font><sz val="10"/><name val="Calibri"/><color rgb="FF'+x.color.slice(1).toUpperCase()+'"/></font>').join('');
+const baseXfs=stylesXml.match(/<cellXfs[^>]*>(.*?)<\/cellXfs>/s)[1].match(/<xf\b[^>]*\/>|<xf\b[^>]*>.*?<\/xf>/gs);
+const extraFonts=exportColorStyles.map(x=>'<font><b/><sz val="10"/><name val="Calibri"/><color rgb="FF'+x.color.slice(1).toUpperCase()+'"/></font>').join('');
 const extraXfs=exportColorStyles.map((x,i)=>baseXfs[x.base].replace(/fontId="\d+"/,'fontId="'+(6+i)+'"').replace(/ applyFont="1"/g,'').replace('<xf ','<xf applyFont="1" ')).join('');
 stylesXml=stylesXml.replace('<fonts count="6">','<fonts count="'+(6+exportColorStyles.length)+'">').replace('</fonts>',extraFonts+'</fonts>').replace('<cellXfs count="18">','<cellXfs count="'+(18+exportColorStyles.length)+'">').replace('</cellXfs>',extraXfs+'</cellXfs>');
 const contentTypes = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +

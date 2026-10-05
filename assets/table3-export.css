@@ -59,5 +59,8 @@ h1{font-size:16px;margin:6px 0 8px;text-align:center;}
   .tf-license-watermark{display:block;}
 }
 
-/* REV447 export colour preservation */
+/* REV448 export colour preservation */
 .tf-export-table{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+
+/* REV448 dark print ink */
+.tf-export-table .tp,.tf-export-table .type-buy{color:#15803d!important;font-weight:700}.tf-export-table .sl,.tf-export-table .type-sell{color:#b91c1c!important;font-weight:700}

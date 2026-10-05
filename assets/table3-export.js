@@ -390,7 +390,7 @@ document.body.innerHTML = `
         td.textContent = c.text;
         if (c.cls) td.className = c.cls;
         const color=col.key==='analyst'?(row.textColors?.analyst||row.textColors?.row):row.textColors?.row;
-        if(/^#[0-9a-f]{6}$/i.test(color||''))td.style.setProperty('color',color,'important');
+        if(/^#[0-9a-f]{6}$/i.test(color||'')){const ink={'#4ade80':'#15803d','#22c55e':'#15803d','#f97373':'#b91c1c','#ef4444':'#b91c1c','#facc15':'#a16207'}[color.toLowerCase()]||color;td.style.setProperty('color',ink,'important');td.style.fontWeight='700';}
         tr.appendChild(td);
       });
       tbody.appendChild(tr);
