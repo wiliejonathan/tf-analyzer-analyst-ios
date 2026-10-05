@@ -8,5 +8,23 @@ test('newest streak cannot enlarge its own reference',()=>{const r=setup(fixture
 test('drawdown alone is red',()=>{const r=setup(fixture(1,1100)).tf_getLatestRiskState('A','XAUUSD');assert.equal(r.drawdown,true);assert.equal(r.consecutiveLoss,false);assert.equal(r.severity,2);});
 test('streak PnL above old drawdown is red',()=>{const r=setup(fixture(2,600)).tf_getLatestRiskState('A','XAUUSD');assert.equal(r.exceedsLossPnl,true);assert.equal(r.baselineMaxDrawdownPips,1000);assert.equal(r.severity,2);});
 test('no recent loss events is green',()=>assert.equal(setup(fixture(0)).tf_getLatestRiskState('A').severity,0));
-test('full-history event crossing month boundary retains prior peak and streak',()=>{const rows=[['2026-01-01',1000],['2026-05-29',-200],['2026-05-30',-200],['2026-06-01',-200],['2026-06-02',1000],['2026-09-01',100,'B']];const r=setup(rows).tf_getLatestRiskState('A','XAUUSD');assert.equal(r.baselineMaxLossStreak,2);assert.equal(r.baselineMaxDrawdownPips,400);assert.equal(r.recentMaxLossStreak,1);assert.equal(r.consecutiveLoss,true);assert.equal(r.drawdown,true);assert.equal(r.severity,2);});
+test('full-history event crossing month boundary retains prior peak and streak',()=>{const rows=[['2026-01-01',1000],['2026-05-29',-200],['2026-05-30',-200],['2026-06-01',-200],['2026-06-02',1000],['2026-09-01',100,'B']];const r=setup(rows).tf_getLatestRiskState('A','XAUUSD');assert.equal(r.baselineMaxLossStreak,2);assert.equal(r.baselineMaxDrawdownPips,400);assert.equal(r.recentMaxLossStreak,3);assert.equal(r.consecutiveLoss,true);assert.equal(r.drawdown,true);assert.equal(r.severity,2);});
 test('critical reason preserved in analyst aggregate across pairs',()=>{const r=setup(fixture(14)).tf_getLatestRiskState('A');assert.equal(r.severity,2);assert(r.reasons.some(s=>s.includes('30%')));});
+
+test('Trade07 regression: April-May maximum, June-September smaller streaks remain green',()=>{
+ const rows=[['2026-01-01',3000]];
+ for(let i=0;i<10;i++)rows.push(['2026-04-'+String(i+1).padStart(2,'0'),-100]);
+ rows.push(['2026-05-01',3000],['2026-06-01',-10],['2026-06-02',-10],['2026-06-03',100],['2026-09-01',100]);
+ const r=setup(rows).tf_getLatestRiskState('A','XAUUSD');assert.equal(r.baselineMaxLossStreak,10);assert.equal(r.consecutiveLoss,false);assert.equal(r.severity,0);
+});
+test('equal-count smaller-loss streak is not the equity-curve record',()=>{
+ const r=setup(fixture(10)).tf_getLatestRiskState('A','XAUUSD');assert.equal(r.consecutiveLoss,false);assert.equal(r.severity,0);
+});
+test('equal ALL maximum uses first event like equity curve; recent repeat is green without red conditions',()=>{
+ const rows=fixture(10,100);rows.push(['2026-03-01',-2000],['2026-03-02',4000]);
+ const r=setup(rows).tf_getLatestRiskState('A','XAUUSD');assert.equal(r.consecutiveLoss,false);assert.equal(r.drawdown,false);assert.equal(r.severity,0);
+});
+test('new larger-pips streak at same count becomes latest maximum and yellow',()=>{
+ const rows=fixture(10,120);rows.push(['2026-03-01',-2000],['2026-03-02',4000]);
+ const r=setup(rows).tf_getLatestRiskState('A','XAUUSD');assert.equal(r.consecutiveLoss,true);assert.equal(r.drawdown,false);assert.equal(r.severity,1);
+});
