@@ -1,1 +1,2 @@
-REV476 verified profitable-month average, default 75/100, Reset; publish v1.17.89
+REV476 verified release: profitable months within six-month window; defaults 75/100; Reset button.
+QA passed all three risk engines and 29 mobile regressions.
