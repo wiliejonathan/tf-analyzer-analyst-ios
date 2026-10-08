@@ -4453,7 +4453,12 @@ catch (e) { return ''; }
 let __tfRiskTaskSource=null, __tfRiskTaskLength=-1, __tfRiskTaskReady=false;
 function tf_analystRiskSettings(){
  const defaults={consOn:true,cons:30,warningOn:true,warning:75,criticalOn:true,critical:100};
- try{const raw=JSON.parse(localStorage.getItem('tfAnalystRiskAdjustment')||'{}');for(const k of ['consOn','warningOn','criticalOn'])if(typeof raw[k]==='boolean')defaults[k]=raw[k];for(const k of ['cons','warning','critical'])if(raw[k]!==''&&Number.isFinite(Number(raw[k]))&&Number(raw[k])>=0&&Number(raw[k])<=1000)defaults[k]=Number(raw[k]);}catch{}
+ try{const raw=JSON.parse(localStorage.getItem('tfAnalystRiskAdjustment')||'{}');
+ if(localStorage.getItem('tfRiskDefaults75100Migrated')!=='1'){
+  if(Number(raw.warning)===50&&Number(raw.critical)===75){raw.warning=75;raw.critical=100;localStorage.setItem('tfAnalystRiskAdjustment',JSON.stringify(raw));}
+  localStorage.setItem('tfRiskDefaults75100Migrated','1');
+ }
+ for(const k of ['consOn','warningOn','criticalOn'])if(typeof raw[k]==='boolean')defaults[k]=raw[k];for(const k of ['cons','warning','critical'])if(raw[k]!==''&&Number.isFinite(Number(raw[k]))&&Number(raw[k])>=0&&Number(raw[k])<=1000)defaults[k]=Number(raw[k]);}catch{}
  return defaults;
 }
 
