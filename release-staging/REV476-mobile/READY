@@ -1,2 +1,1 @@
-REV476 verified release: profitable months within six-month window; defaults 75/100; Reset button.
-QA passed all three risk engines and 29 mobile regressions.
+REV476: profitable-month average and cache generation verified. Publish final v1.17.89 package.
