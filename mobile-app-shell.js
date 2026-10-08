@@ -3,6 +3,7 @@
 
   const SCREENS = [
     { key:'table1', target:'section-summary', title:'Table 1', subtitle:'Summary & Money Management', icon:'risk' },
+    { key:'report', target:'tf-analyst-report', title:'Analis Report', subtitle:'Risiko Analis', icon:'stats' },
     { key:'calculator', target:'tf-mobile-lot-calculator-screen', title:'Calculator Lot', navLabel:'Calculator', subtitle:'Simulasi Risk & Lot', icon:'calc' },
     { key:'performance', target:'tf-mobile-performance-screen', title:'Performance', subtitle:'Probability Analis', icon:'perf' },
     { key:'table2', target:'section-monthly', title:'Table 2', subtitle:'Statistics', icon:'stats' },
@@ -1424,6 +1425,7 @@
   }
 
   function activate(key, userAction){
+    if(window.tfAnalystReportShow)window.tfAnalystReportShow(key==='report');
     tagScreens();
     let {def,el} = screenFor(key);
     if(!el){
