@@ -8201,7 +8201,7 @@ const baseHeight = tfEqLandscape
 : Math.max(336, Math.min(380, Math.round(tfEqViewportH * 0.44)));
 if (!width)
 return;
-const dpr = window.devicePixelRatio || 1;
+const dpr = (globalThis.navigator?.hardwareConcurrency&&globalThis.navigator?.hardwareConcurrency<=4||globalThis.navigator?.deviceMemory&&globalThis.navigator?.deviceMemory<=4)?Math.min(2,window.devicePixelRatio||1):(window.devicePixelRatio||1);
 canvas.width = width * dpr;
 canvas.height = baseHeight * dpr;
 canvas.style.width = width + 'px';
@@ -9677,8 +9677,9 @@ function setupEquityCurveInteractions() {
 const canvas = document.getElementById('equity-curve-canvas');
 if (!canvas)
 return;
-canvas.addEventListener('mousemove', tf_handleEquityCanvasMouseMove);
-canvas.addEventListener('mouseleave', tf_handleEquityCanvasMouseLeave);
+let tfPointerFrame474=0,tfPointerEvent474=null;
+canvas.addEventListener('mousemove', evt=>{tfPointerEvent474={clientX:evt.clientX,clientY:evt.clientY,currentTarget:canvas,target:canvas,buttons:evt.buttons};if(!tfPointerFrame474)tfPointerFrame474=requestAnimationFrame(()=>{tfPointerFrame474=0;const latest=tfPointerEvent474;tfPointerEvent474=null;if(latest)tf_handleEquityCanvasMouseMove(latest);});},{passive:true});
+canvas.addEventListener('mouseleave',evt=>{tfPointerEvent474=null;if(tfPointerFrame474)cancelAnimationFrame(tfPointerFrame474);tfPointerFrame474=0;tf_handleEquityCanvasMouseLeave(evt);},{passive:true});
 canvas.addEventListener('mousedown', tf_handleEquityCanvasMouseDown);
 canvas.addEventListener('dblclick', tf_handleEquityCanvasDoubleClick);
 canvas.addEventListener('wheel', tf_handleEquityCanvasWheel, { passive: false });
@@ -9689,11 +9690,11 @@ canvas.addEventListener('touchmove', tf_handleEquityCanvasTouchMove, { passive: 
 canvas.addEventListener('touchend', tf_handleEquityCanvasTouchEnd, { passive: false });
 canvas.addEventListener('touchcancel', tf_handleEquityCanvasTouchCancel, { passive: false });
 window.addEventListener('mouseup', tf_handleEquityCanvasMouseUp);
+let tfResizeFrame474=0;
 window.addEventListener('resize', function () {
-if (!equityCurvePoints.length)
-return;
-drawEquityCurve();
-});
+if (!equityCurvePoints.length || tfResizeFrame474)return;
+tfResizeFrame474=requestAnimationFrame(()=>{tfResizeFrame474=0;const width=canvas.parentElement?.clientWidth||0,dpr=(globalThis.navigator?.hardwareConcurrency&&globalThis.navigator?.hardwareConcurrency<=4||globalThis.navigator?.deviceMemory&&globalThis.navigator?.deviceMemory<=4)?Math.min(2,window.devicePixelRatio||1):(window.devicePixelRatio||1);if(width&&canvas.width!==Math.max(1,Math.round(width*dpr)))drawEquityCurve();});
+},{passive:true});
 }
 function setupEquityChartModeSelector() {
 try {
@@ -17932,7 +17933,7 @@ function tf_animateEquity412() {
     const complete = snapshot();
     animation.progress = 0;
     const ctx = canvas.getContext('2d');
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = (globalThis.navigator?.hardwareConcurrency&&globalThis.navigator?.hardwareConcurrency<=4||globalThis.navigator?.deviceMemory&&globalThis.navigator?.deviceMemory<=4)?Math.min(2,window.devicePixelRatio||1):(window.devicePixelRatio||1);
     const left = 48 * dpr;
     const right = Math.max(left, complete.width - tf_getEquityPaddingRight() * dpr);
     const paint = progress => {

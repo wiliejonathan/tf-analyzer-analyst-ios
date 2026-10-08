@@ -1,0 +1,72 @@
+name: Publish iOS Browser REV474 dashboard performance
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'release-staging/REV474-mobile/READY'
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: QA
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+          mkdir -p ../../outputs
+          node --check mobile-data-bridge.js
+          node --check mobile-chrome-shim.js
+          node --check assets/dashboard-mobile.js
+          node --check mobile-license-gate.js
+          node --check mobile-force-update.js
+          node --check service-worker.js
+          node --test tests/activation404.cjs
+          node --test tests/risk433.cjs
+          node --test tests/import407.cjs
+          node --test tests/performance406.cjs
+          node --test tests/equity412.cjs
+          node --test tests/animation414.cjs
+          npm install --no-save playwright
+          TF_BROWSER_CHANNEL=chrome node tests/performance474.cjs
+          TF_BROWSER_CHANNEL=chrome node tests/report474.cjs
+          TF_BROWSER_CHANNEL=chrome node tests/mobile419.cjs
+          TF_BROWSER_CHANNEL=chrome node tests/chart417.cjs
+          TF_BROWSER_CHANNEL=chrome node tests/adjustment418.cjs
+          node --test tests/risk433.cjs
+          TF_BROWSER_CHANNEL=chrome node tests/cards-export448.cjs
+          TF_BROWSER_CHANNEL=chrome node tests/presentation414.cjs
+          TF_BROWSER_CHANNEL=chrome node tests/popup407.cjs
+          TF_BROWSER_CHANNEL=chrome node tests/import-browser417.cjs
+          TF_BROWSER_CHANNEL=chrome TF_RISK_SOURCE=assets/dashboard-mobile.js TF_DASHBOARD_CSS=assets/dashboard-original.css TF_EXTRA_CSS=mobile-overrides.css node tests/browser406.cjs
+          grep -q 'rev474-four-month-risk' service-worker.js
+          echo 'REV474 mobile QA PASS'
+      - name: Build
+        run: |
+          set -euo pipefail
+          OUT=/tmp/TF_Analyzer_Analyst_iOS_BROWSER_REV474.zip
+          zip -qr "$OUT" . -x '.git/*' '.github/*' 'release-staging/*' 'node_modules/*' 'package-lock.json' 'package.json'
+          unzip -tq "$OUT"
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG=v1.17.87
+          OUT=/tmp/TF_Analyzer_Analyst_iOS_BROWSER_REV474.zip
+          NOTES=release-staging/REV474-mobile/RELEASE_NOTES.md
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --target "$GITHUB_SHA" --title 'TF Analyzer Analyst V1.17.87 - REV474 Dashboard Performance' --notes-file "$NOTES" --latest
+            gh release upload "$TAG" "$OUT" --clobber
+          else
+            gh release create "$TAG" "$OUT" --target "$GITHUB_SHA" --title 'TF Analyzer Analyst V1.17.87 - REV474 Dashboard Performance' --notes-file "$NOTES" --latest
+          fi
+
+
+
+
+

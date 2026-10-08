@@ -460,6 +460,7 @@
   }
 
   function removeMobilePricePanel(){
+    if(document.getElementById('tf-pair-value-adjustment'))return;
     // Desktop REV224 places Investing.com note + price table + Performance
     // inside the same section-note. Performance is moved to its own screen
     // first, then the leftover price panel is removed completely.

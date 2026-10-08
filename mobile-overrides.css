@@ -1,6 +1,9 @@
 /* TF Multi-Analyst Mobile — native-app-style adaptation of REV224.
    The original calculations, IDs and table logic stay intact. */
 html,body{max-width:100%;overflow-x:hidden;overscroll-behavior-y:none}
+/* REV474: preserve the separately collapsible pair valuation card. */
+#section-summary #tf-pair-value-adjustment .pip-table-compact-wrap{display:grid!important;grid-template-columns:1fr!important;gap:8px;overflow:auto;}
+#section-summary #tf-pair-value-adjustment #tf-wait-price-note,#section-summary #tf-pair-value-adjustment #tfInvestingProLogoLink,#section-summary #tf-pair-value-adjustment .tfRefreshPriceLink{display:inline!important;}
 html{background:#020617}
 body.tf-mobile-app{
   min-width:0!important;
@@ -9254,7 +9257,7 @@ body.tf-risk-explainer-open{overflow:hidden!important;}
 #tf-mobile-performance-screen #tf-balance-cards412 .tf-balance-value412{font-size:clamp(18px,4.5vw,25px);overflow-wrap:anywhere;line-height:1.25;}
 @media(min-width:700px){#tf-mobile-performance-screen #tf-balance-cards412{grid-template-columns:repeat(4,minmax(0,1fr))!important;}}
 
-/* REV473: wider, shorter status dialogs; same styling on dashboard and report. */
+/* REV474: wider, shorter status dialogs; same styling on dashboard and report. */
 #tf-risk-explainer .tf-risk-explainer-card,#tf-report-explainer .tf-risk-explainer-card{max-width:540px;max-height:min(650px,calc(100dvh - 32px));padding:20px 24px;}
 #tf-report-explainer{width:540px;max-width:calc(100vw - 32px);}
 #tf-risk-explainer .tf-risk-explainer-eyebrow,#tf-report-explainer .tf-risk-explainer-eyebrow{margin-bottom:12px;}
