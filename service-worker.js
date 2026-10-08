@@ -1,29 +1,29 @@
-const CACHE='tf-analyzer-analyst-mobile-rev476-four-month-risk';
+const CACHE='tf-analyzer-analyst-mobile-rev477-four-month-risk';
 const ASSETS=[
- './assets/tf-dashboard-performance.js?rev=476',
- './assets/tf-analyst-risk-adjustment.js?rev=476',
- './assets/tf-analyst-report.js?rev=476',
+ './assets/tf-dashboard-performance.js?rev=477',
+ './assets/tf-analyst-risk-adjustment.js?rev=477',
+ './assets/tf-analyst-report.js?rev=477',
  './export_table3_pdf.html',
- './assets/table3-export.js?rev=476',
- './assets/table3-export.css?rev=476',
-  './assets/dashboard-mobile.js?rev=476',
-  './assets/dashboard-original.css?rev=476',
+ './assets/table3-export.js?rev=477',
+ './assets/table3-export.css?rev=477',
+  './assets/dashboard-mobile.js?rev=477',
+  './assets/dashboard-original.css?rev=477',
   './icon32.png',
   './icons/icon-180.png',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './index.html',
   './manifest.webmanifest',
-  './mobile-app-shell.js?rev=476',
-  './mobile-remote.js?rev=476',
-  './mobile-chrome-shim.js?rev=476',
-  './mobile-data-bridge.js?rev=476',
-  './mobile-force-update.js?rev=476',
-  './mobile-license-gate.js?rev=476',
-  './activation-proxy.html?rev=476',
-  './mobile-remote-dashboard-home-hotfix.js?rev=476',
-  './mobile-import-fix-v30.js?rev=476',
-  './mobile-overrides.css?rev=476'
+  './mobile-app-shell.js?rev=477',
+  './mobile-remote.js?rev=477',
+  './mobile-chrome-shim.js?rev=477',
+  './mobile-data-bridge.js?rev=477',
+  './mobile-force-update.js?rev=477',
+  './mobile-license-gate.js?rev=477',
+  './activation-proxy.html?rev=477',
+  './mobile-remote-dashboard-home-hotfix.js?rev=477',
+  './mobile-import-fix-v30.js?rev=477',
+  './mobile-overrides.css?rev=477'
 ];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
@@ -79,4 +79,5 @@ self.addEventListener('notificationclick', event => {
 
 
 // REV381: Mobile-only parity with official PC REV379 canonical export data.
+
 
