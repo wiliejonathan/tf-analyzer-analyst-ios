@@ -1,29 +1,29 @@
-const CACHE='tf-analyzer-analyst-mobile-rev474-four-month-risk';
+const CACHE='tf-analyzer-analyst-mobile-rev475-four-month-risk';
 const ASSETS=[
- './assets/tf-dashboard-performance.js?rev=474',
- './assets/tf-analyst-risk-adjustment.js?rev=474',
- './assets/tf-analyst-report.js?rev=474',
+ './assets/tf-dashboard-performance.js?rev=475',
+ './assets/tf-analyst-risk-adjustment.js?rev=475',
+ './assets/tf-analyst-report.js?rev=475',
  './export_table3_pdf.html',
- './assets/table3-export.js?rev=474',
- './assets/table3-export.css?rev=474',
-  './assets/dashboard-mobile.js?rev=474',
-  './assets/dashboard-original.css?rev=474',
+ './assets/table3-export.js?rev=475',
+ './assets/table3-export.css?rev=475',
+  './assets/dashboard-mobile.js?rev=475',
+  './assets/dashboard-original.css?rev=475',
   './icon32.png',
   './icons/icon-180.png',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './index.html',
   './manifest.webmanifest',
-  './mobile-app-shell.js?rev=474',
-  './mobile-remote.js?rev=474',
-  './mobile-chrome-shim.js?rev=474',
-  './mobile-data-bridge.js?rev=474',
-  './mobile-force-update.js?rev=474',
-  './mobile-license-gate.js?rev=474',
-  './activation-proxy.html?rev=474',
-  './mobile-remote-dashboard-home-hotfix.js?rev=474',
-  './mobile-import-fix-v30.js?rev=474',
-  './mobile-overrides.css?rev=474'
+  './mobile-app-shell.js?rev=475',
+  './mobile-remote.js?rev=475',
+  './mobile-chrome-shim.js?rev=475',
+  './mobile-data-bridge.js?rev=475',
+  './mobile-force-update.js?rev=475',
+  './mobile-license-gate.js?rev=475',
+  './activation-proxy.html?rev=475',
+  './mobile-remote-dashboard-home-hotfix.js?rev=475',
+  './mobile-import-fix-v30.js?rev=475',
+  './mobile-overrides.css?rev=475'
 ];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
