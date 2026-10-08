@@ -1,4 +1,4 @@
-const CACHE='tf-analyzer-analyst-mobile-rev475-four-month-risk';
+const CACHE='tf-analyzer-analyst-mobile-rev476-four-month-risk';
 const ASSETS=[
  './assets/tf-dashboard-performance.js?rev=476',
  './assets/tf-analyst-risk-adjustment.js?rev=476',
