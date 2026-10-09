@@ -9836,3 +9836,27 @@ body #tf-dashboard-main :is(#section-history,#equity-curve-section) :is(#withdra
 }
 
 
+
+/* REV486: identical full-width analyst grids on all analysis screens. */
+body #tf-dashboard-main :is(#tf-analyst-filter-row-table1,#tf-analyst-filter-row-holding,#analyst-filter-row,#analyst-filter-row-monthly,#analyst-filter-row-history,#analyst-filter-row-equity){
+ display:block!important;width:100%!important;min-width:0!important;max-width:none!important;
+}
+body #tf-dashboard-main :is(#analyst-filter-container-table1,#analyst-filter-container-holding,#analyst-filter-container,#analyst-filter-container-monthly,#analyst-filter-container-history,#analyst-filter-container-equity){
+ display:block!important;width:100%!important;min-width:0!important;max-width:none!important;flex:none!important;margin:0!important;
+}
+body #tf-dashboard-main [id^="analyst-filter-container"]>.analyst-filter-list{
+ display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px 12px!important;width:100%!important;margin:8px 0!important;padding:0!important;justify-content:stretch!important;align-items:start!important;
+}
+body #tf-dashboard-main [id^="analyst-filter-container"]>.analyst-filter-list>.analyst-filter-item{
+ width:100%!important;min-width:0!important;max-width:none!important;margin:0!important;padding:0!important;position:relative!important;
+}
+body #tf-dashboard-main [id^="analyst-filter-container"]>.analyst-filter-list>.analyst-filter-item>label{
+ display:flex!important;flex-wrap:wrap!important;align-items:center!important;justify-content:flex-start!important;gap:4px 6px!important;width:100%!important;min-width:0!important;max-width:none!important;margin:0!important;padding:0!important;grid-template-columns:none!important;
+}
+body #tf-dashboard-main [id^="analyst-filter-container"]>.analyst-filter-list>.analyst-filter-item>label>input{flex:0 0 auto!important;margin:0!important;}
+body #tf-dashboard-main [id^="analyst-filter-container"]>.analyst-filter-list>.analyst-filter-item>label>span{
+ flex:0 1 auto!important;width:auto!important;min-width:0!important;max-width:100%!important;white-space:normal!important;text-overflow:clip!important;overflow:visible!important;margin:0!important;overflow-wrap:anywhere!important;
+}
+body #tf-dashboard-main [id^="analyst-filter-container"] .analyst-filter-arrow{flex:0 0 auto!important;margin-left:0!important;}
+@media(min-width:641px){body #tf-dashboard-main [id^="analyst-filter-container"]>.analyst-filter-list{grid-template-columns:repeat(3,minmax(0,1fr))!important;}}
+@media(min-width:900px){body #tf-dashboard-main [id^="analyst-filter-container"]>.analyst-filter-list{grid-template-columns:repeat(4,minmax(0,1fr))!important;}}
