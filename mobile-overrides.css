@@ -9568,3 +9568,11 @@ body.tf-risk-explainer-open{overflow:hidden!important;}
 #tf-mobile-import-input::-webkit-file-upload-button {
   cursor: pointer !important;
 }
+
+
+/* REV484: expanded streak values align to parent columns 3..10. */
+#drawdown-table>tbody>tr.dd-child-row>td.dd-detail-empty484{background:transparent!important;padding:0!important;}
+#drawdown-table>tbody>tr.dd-child-row>td.dd-detail-values484{padding:0!important;position:static!important;overflow:visible!important;}
+#drawdown-table .drawdown-detail-aligned484{margin:0!important;padding:0!important;position:static!important;overflow:visible!important;width:auto!important;min-width:0!important;max-width:none!important;}
+.tf-score-month484{border:1px solid #334155;border-radius:10px;overflow:hidden;margin:10px 0;background:transparent;}
+.tf-score-month484 .tf-score-detail-wrap{margin:0!important;border:0!important;border-radius:0!important;}

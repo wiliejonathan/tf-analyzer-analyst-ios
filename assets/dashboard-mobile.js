@@ -14057,87 +14057,12 @@ detailTable.__tfDdMainWidths = widths;
 catch (e) { }
 }
 function tf_bindDrawdownDetailScrollSync(wrap) {
-try {
-if (!wrap) return;
-const outer = document.querySelector('#section-history #drawdown-summary > .table-wrapper > .table-scroll.drawdown-noscroll') ||
-  document.querySelector('#section-history #drawdown-summary .table-scroll.drawdown-noscroll');
-if (!outer) return;
-wrap.classList.add('drawdown-detail-wrap-v318', 'drawdown-detail-wrap-v321');
-const detailTable = wrap.querySelector('.drawdown-detail-table');
-
-// REV321 geometry is calculated from the actual position of parent header #3,
-// not from hard-coded 42+120px assumptions. This makes the empty area beneath
-// main columns #1/#2 exact on every phone density/viewport.
-const applyGeometry = () => {
-  try {
-    const ths = document.querySelectorAll('#drawdown-table > thead > tr > th');
-    if (!ths || ths.length < 10) return;
-    if (detailTable) tf_applyDrawdownDetailColWidthsPx(detailTable);
-    const outerRect = outer.getBoundingClientRect();
-    const thirdRect = ths[2].getBoundingClientRect();
-    const frozen = Math.max(0, (thirdRect.left - outerRect.left) + (outer.scrollLeft || 0));
-    const viewport = Math.max(96, outer.clientWidth - frozen);
-    const leftPx = frozen.toFixed(3) + 'px';
-    const viewportPx = viewport.toFixed(3) + 'px';
-    wrap.style.setProperty('position', 'sticky', 'important');
-    wrap.style.setProperty('left', leftPx, 'important');
-    wrap.style.setProperty('width', viewportPx, 'important');
-    wrap.style.setProperty('min-width', viewportPx, 'important');
-    wrap.style.setProperty('max-width', viewportPx, 'important');
-    wrap.style.setProperty('--tf-dd-frozen-width', leftPx);
-  } catch (e) { }
-};
-applyGeometry();
-requestAnimationFrame(applyGeometry);
-setTimeout(applyGeometry, 60);
-
-const syncToOuter = () => {
-  if (wrap.__tfDdSyncBusy) return;
-  wrap.__tfDdSyncBusy = true;
-  const maxOuter = Math.max(0, outer.scrollWidth - outer.clientWidth);
-  const target = Math.max(0, Math.min(wrap.scrollLeft || 0, maxOuter));
-  if (Math.abs((outer.scrollLeft || 0) - target) > 0.25) outer.scrollLeft = target;
-  requestAnimationFrame(() => { wrap.__tfDdSyncBusy = false; });
-};
-wrap.addEventListener('scroll', syncToOuter, { passive: true });
-
-if (!outer.__tfDdOuterSyncBoundV321) {
-  outer.__tfDdOuterSyncBoundV321 = true;
-  outer.addEventListener('scroll', () => {
-    const left = outer.scrollLeft || 0;
-    document.querySelectorAll('#section-history #drawdown-table .drawdown-detail-wrap-v321').forEach((w) => {
-      const max = Math.max(0, w.scrollWidth - w.clientWidth);
-      const next = Math.max(0, Math.min(left, max));
-      if (Math.abs((w.scrollLeft || 0) - next) > 0.25) w.scrollLeft = next;
-    });
-  }, { passive: true });
-  try {
-    window.addEventListener('resize', () => {
-      document.querySelectorAll('#section-history #drawdown-table .drawdown-detail-wrap-v321').forEach((w) => {
-        try {
-          const tbl = w.querySelector('.drawdown-detail-table');
-          if (tbl) tf_applyDrawdownDetailColWidthsPx(tbl);
-          const ths = document.querySelectorAll('#drawdown-table > thead > tr > th');
-          const out = document.querySelector('#section-history #drawdown-summary .table-scroll.drawdown-noscroll');
-          if (!ths || ths.length < 3 || !out) return;
-          const outRect = out.getBoundingClientRect();
-          const thirdRect = ths[2].getBoundingClientRect();
-          const frozen = Math.max(0, (thirdRect.left - outRect.left) + (out.scrollLeft || 0));
-          const viewport = Math.max(96, out.clientWidth - frozen);
-          w.style.setProperty('left', frozen.toFixed(3) + 'px', 'important');
-          w.style.setProperty('width', viewport.toFixed(3) + 'px', 'important');
-          w.style.setProperty('min-width', viewport.toFixed(3) + 'px', 'important');
-          w.style.setProperty('max-width', viewport.toFixed(3) + 'px', 'important');
-          const max = Math.max(0, w.scrollWidth - w.clientWidth);
-          w.scrollLeft = Math.max(0, Math.min(out.scrollLeft || 0, max));
-        } catch (e) { }
-      });
-    }, { passive:true });
-  } catch (e) { }
-}
-const initialMax = Math.max(0, wrap.scrollWidth - wrap.clientWidth);
-wrap.scrollLeft = Math.max(0, Math.min(outer.scrollLeft || 0, initialMax));
-} catch (e) { }
+ if(!wrap)return;
+ const table=wrap.querySelector('.drawdown-detail-table');
+ const apply=()=>{if(table)tf_applyDrawdownDetailColWidthsPx(table);};
+ wrap.classList.add('drawdown-detail-aligned484');
+ apply();requestAnimationFrame(apply);
+ if(!window.__tfDdResize484){window.__tfDdResize484=true;window.addEventListener('resize',()=>document.querySelectorAll('.drawdown-detail-aligned484 .drawdown-detail-table').forEach(tf_applyDrawdownDetailColWidthsPx),{passive:true});}
 }
 function tf_buildDrawdownDetailElement(st) {
 const wrap = document.createElement('div');
@@ -14269,7 +14194,8 @@ const st = map && analyst ? map[analyst] : null;
 const childTr = document.createElement('tr');
 childTr.className = 'dd-child-row';
 const td = document.createElement('td');
-td.colSpan = 10;
+for(let i=0;i<2;i++){const blank=document.createElement('td');blank.className='dd-detail-empty484';childTr.appendChild(blank);}
+td.colSpan = 8;td.className='dd-detail-values484';
 td.appendChild(tf_buildDrawdownDetailElement(st || {}));
 childTr.appendChild(td);
 if (tr.parentNode) {
@@ -17832,11 +17758,11 @@ showError('');
         '<td colspan="3">' + metricCell(r,'profitMonths') + '</td>' +
         '<td colspan="3">' + metricCell(r,'recoveryRate') + '</td>' +
       '</tr>'
-    ).join('');
+    );
     const cols = '<colgroup><col class="tf-score-date-col-v318">' +
       '<col class="tf-score-unit-v318"><col class="tf-score-unit-v318"><col class="tf-score-unit-v318">' +
       '<col class="tf-score-unit-v318"><col class="tf-score-unit-v318"><col class="tf-score-unit-v318"></colgroup>';
-    return '<div class="tf-score-detail-wrap tf-score-detail-wrap-v317 tf-score-detail-wrap-v318"><table class="tf-score-detail-table tf-score-detail-mobile-v312 tf-score-detail-mobile-v314 tf-score-detail-mobile-v317 tf-score-detail-mobile-v318">' + cols + '<tbody>' + rows + '</tbody></table></div>';
+    return rows.map(monthRows => '<div class="tf-score-month484"><div class="tf-score-detail-wrap tf-score-detail-wrap-v317 tf-score-detail-wrap-v318"><table class="tf-score-detail-table tf-score-detail-mobile-v312 tf-score-detail-mobile-v314 tf-score-detail-mobile-v317 tf-score-detail-mobile-v318">' + cols + '<tbody>' + monthRows + '</tbody></table></div></div>').join('');
   }
   function readStorage() {
     return new Promise((resolve) => {
@@ -17997,6 +17923,7 @@ function tf_ensureBalanceCards414(screen) {
     if (head) screen.insertBefore(head, perf);
     const adjustment = document.getElementById('tf-user-adjustment415');
     if (adjustment) screen.insertBefore(adjustment, head || perf);
+    screen.insertBefore(host, adjustment || head || perf);
 
     if (range) screen.insertBefore(range, perf);
   }
