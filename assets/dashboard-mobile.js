@@ -12167,7 +12167,7 @@ const hasChromeAPI = typeof chrome !== 'undefined' && chrome.storage && chrome.s
 if (!hasChromeAPI)
 return Promise.resolve(false);
 return new Promise((resolve,reject)=>{
-chrome.storage.local.get(['tfMonthlyStats', 'tfHistorySignals', 'tfAnalystSources', 'tfNoDataPairs', 'tfAvgSlPips'], async (data) => {
+chrome.storage.local.get(['tfMonthlyStats', 'tfHistorySignals', 'tfAnalystMonths', 'tfAnalystSources', 'tfNoDataPairs', 'tfAvgSlPips'], async (data) => {
 try {
 const rawMonthlyStats = data.tfMonthlyStats || {};
 const rawHistory = data.tfHistorySignals || [];
@@ -15174,7 +15174,7 @@ try {
 tf_loadTable1StateFromLocalStorage();
 }
 catch (e) { }
-const keys = ['tfHistorySignals', 'tfAnalystSources', 'tfNoDataPairs', 'tfAvgSlPips', TF_MYFXBOOK_PRICES_KEY];
+const keys = ['tfHistorySignals', 'tfAnalystMonths', 'tfAnalystSources', 'tfNoDataPairs', 'tfAvgSlPips', TF_MYFXBOOK_PRICES_KEY];
 const data = await tf_storageLocalGet(keys);
 try {
 historySignals = Array.isArray(data.tfHistorySignals) ? data.tfHistorySignals : [];

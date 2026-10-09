@@ -9837,7 +9837,7 @@ body #tf-dashboard-main :is(#section-history,#equity-curve-section) :is(#withdra
 
 
 
-/* REV486: identical full-width analyst grids on all analysis screens. */
+/* REV487: identical full-width analyst grids on all analysis screens. */
 body #tf-dashboard-main :is(#tf-analyst-filter-row-table1,#tf-analyst-filter-row-holding,#analyst-filter-row,#analyst-filter-row-monthly,#analyst-filter-row-history,#analyst-filter-row-equity){
  display:block!important;width:100%!important;min-width:0!important;max-width:none!important;
 }

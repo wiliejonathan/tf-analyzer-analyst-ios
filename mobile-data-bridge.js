@@ -519,7 +519,7 @@ function combine(payloads,names){
   out.tfHistorySignals=Array.isArray(first.tfHistorySignals)?first.tfHistorySignals.slice():[];
   out.tfScoreHistory=Array.isArray(first.tfScoreHistory)?first.tfScoreHistory.slice():[];
   out.tfMonthlyStats=mergeMonthly({},first.tfMonthlyStats);
-  ["tfNoDataPairs","tfAvgSlPips","tfAnalystSources","tfAnalystNameCacheByUrl"].forEach(k=>{
+  ["tfNoDataPairs","tfAvgSlPips","tfAnalystMonths","tfAnalystSources","tfAnalystNameCacheByUrl"].forEach(k=>{
     out[k]=mergeObjects({},first[k]);
   });
   for(let i=1;i<normalized.length;i++){
@@ -527,7 +527,7 @@ function combine(payloads,names){
     out.tfHistorySignals=mergeHistory(out.tfHistorySignals,src.tfHistorySignals);
     out.tfScoreHistory=mergeScore(out.tfScoreHistory,src.tfScoreHistory);
     out.tfMonthlyStats=mergeMonthly(out.tfMonthlyStats,src.tfMonthlyStats);
-    ["tfNoDataPairs","tfAvgSlPips","tfAnalystSources","tfAnalystNameCacheByUrl"].forEach(k=>out[k]=mergeObjects(out[k],src[k]));
+    ["tfNoDataPairs","tfAvgSlPips","tfAnalystMonths","tfAnalystSources","tfAnalystNameCacheByUrl"].forEach(k=>out[k]=mergeObjects(out[k],src[k]));
     Object.keys(src||{}).forEach(k=>{if(!(k in out))out[k]=clone(src[k],src[k]);});
   }
   const firstPayload=normalized[0].payload||{};
@@ -703,7 +703,7 @@ async function applyPayload(payload,fileNames,opts={}){
   );
   const hasCanonicalRawStorage=tfMobileLooksCanonicalStorageV399(rawStorage);
   const st=opts.normalized===true?rawStorage:tfMobileNormalizeStorageV31(rawStorage,{canonicalPc:(hasOfficialPcEnvelope||hasCanonicalRawStorage)});
-  const defaults={tfMonthlyStats:{},tfHistorySignals:[],tfScoreHistory:[],tfNoDataPairs:{},tfAvgSlPips:{},tfAnalystSources:{}};
+  const defaults={tfMonthlyStats:{},tfHistorySignals:[],tfScoreHistory:[],tfNoDataPairs:{},tfAvgSlPips:{},tfAnalystMonths:{},tfAnalystSources:{}};
   Object.keys(defaults).forEach(k=>{if(!(k in st))st[k]=defaults[k];});
   st.tfSelectedTimeRange=st.tfSelectedTimeRange||"all_time";
   st.tfLastImportMeta={

@@ -261,7 +261,7 @@
           clientType: 'MOBILE',
           mobilePlatform: platformName(),
           mobileVersion: '1.17.61',
-          remoteRevision: 'REV486',
+          remoteRevision: 'REV487',
           requestNonce: String(Date.now()) + '-' + Math.random().toString(36).slice(2)
         })
       });

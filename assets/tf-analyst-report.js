@@ -4,8 +4,10 @@
   const norm=v=>typeof tf_latestRiskNormAnalyst==='function'?tf_latestRiskNormAnalyst(v):String(v||'').trim().toLowerCase();
   const safeUrl=v=>{try{const u=new URL(v);return /^https?:$/.test(u.protocol)?u.href:'';}catch{return '';}};
   let panel,home,report,active=false,scheduled=false,lastHistory,lastSources,lastLength=-1,sortKey='name',direction=1,sortedRows=[],moneySignature='',dialog;
-  const moved=[];
-  const columns=[['severity','Status'],['name','Nama Analis'],['oldLoss','CL Lama'],['newLoss','CL Baru (4 bln)'],['oldDd','DD Lama'],['newDd','DD Baru'],['avgPnl','AVG. PnL (6 Month)\nTotal Bulan Profit saja'],['latestPnl','PnL Bulan Ini']];
+  const moved=[];let monthsByAnalyst={};
+  function readMonths(){try{chrome.storage.local.get(['tfAnalystMonths'],d=>{monthsByAnalyst=d?.tfAnalystMonths||{};if(active)render();});}catch{}}
+  function monthValue(value){const n=Number(value);return value!==null&&value!==undefined&&String(value).trim()!==''&&Number.isInteger(n)&&n>=0?n:null;}
+  const columns=[['severity','Status'],['name','Nama Analis'],['monthsSince','Month Since'],['oldLoss','CL Lama'],['newLoss','CL Baru (4 bln)'],['oldDd','DD Lama'],['newDd','DD Baru'],['avgPnl','AVG. PnL (6 Month)\nTotal Bulan Profit saja'],['latestPnl','PnL Bulan Ini']];
   function dollarFactor(analyst,pair){
     try{
       const dpp=getDollarPerPipForAnalyst(null,pair),sl=getEffectiveSlForAnalyst(analyst,pair,computeSlStatsFromHistory(analyst,pair)).pips;
@@ -40,7 +42,7 @@
     });
     Object.entries(sources).forEach(([name,source])=>{
       const k=norm(name);if(!grouped.has(k))grouped.set(k,{name,severity:null,pairs:[],oldLoss:null,newLoss:null,oldDd:null,newDd:null,oldUsd:null,newUsd:null,reasons:[]});
-      grouped.get(k).url=safeUrl(source?.url);
+      grouped.get(k).url=safeUrl(source?.url);grouped.get(k).monthsSince=monthValue(source?.monthsSince);
     });
     // Imported histories may retain URLs even when source metadata is absent.
     const history=typeof historySignals!=='undefined'&&Array.isArray(historySignals)?historySignals:[];
@@ -54,7 +56,7 @@
   function metricLines(r,key){const prefix=key==='avgPnl'?'avg':'latest';const lines=key.endsWith('Dd')?valueLines(r[key+'Signed']??(r[key]==null?null:-r[key]),r[key==='oldDd'?'oldUsd':'newUsd']==null?null:-r[key==='oldDd'?'oldUsd':'newUsd']):valueLines(r.pnl?.[prefix+'Pips'],r.pnl?.[prefix+'Usd']);if(key.endsWith('Dd')){const pct=r[key+'Pct'];lines.push(pct==null?'—':pairNumber.format(pct)+'%');}else if(key==='avgPnl'){lines.push(r.pnl?.profitMonths==null?'—':'Avg. '+r.pnl.profitMonths+' Bulan');}else if(key==='latestPnl'){const numerator=r.latestPnl,denominator=r.avgPnl;lines.splice(1,0,numerator==null||denominator==null?'—':denominator>0?pairNumber.format(numerator/denominator*100)+'%':numerator===0?'0%':'—');}return lines;}
   function render(){
     if(!panel)return;
-    const {state,rows}=data();moneySignature=moneyKey();
+    const {state,rows}=data();for(const r of rows){const entry=Object.entries(monthsByAnalyst).find(([name])=>norm(name)===norm(r.name));if(entry)r.monthsSince=monthValue(typeof entry[1]==='object'?entry[1].monthsSince:entry[1]);}moneySignature=moneyKey();
     lastHistory=typeof historySignals!=='undefined'?historySignals:null;lastLength=lastHistory?.length||0;lastSources=typeof analystSourcesByName!=='undefined'?analystSourcesByName:null;
     panel.querySelector('.tf-report-period').textContent=state.monthKey?'Periode baru: '+state.windowStartMonth+' – '+state.monthKey+'. Pembanding lama: history sebelum periode tersebut.':'Belum ada history bertanggal untuk dibandingkan.';
     sortedRows=rows.sort((a,b)=>{const x=a[sortKey],y=b[sortKey];if(x==null||y==null)return x==null&&y==null?a.name.localeCompare(b.name):x==null?1:-1;return (sortKey==='name'?x.localeCompare(y,'id',{sensitivity:'base'}):x-y)*direction||a.name.localeCompare(b.name);});
@@ -70,7 +72,7 @@
       icon.title=r.reasons?.join('; ')||(s===null?'Data history belum tersedia':'Tidak ada kejadian maksimum terbaru');td.append(icon);tr.append(td);
       const name=document.createElement('td'),link=document.createElement(r.url?'a':'span');link.textContent=r.name;
       if(r.url){link.href=r.url;link.target='_blank';link.rel='noopener noreferrer';}else link.title='Link analis belum tersedia pada data import.';
-      name.append(link);tr.append(name);
+      name.append(link);tr.append(name);const months=document.createElement('td');months.textContent=r.monthsSince==null?'—':number.format(r.monthsSince);months.title='Months (since …) pada halaman channel; bukan jumlah bulan history yang diimpor.';tr.append(months);
       for(const key of ['oldLoss','newLoss']){const cell=document.createElement('td');cell.textContent=r[key]==null?'—':number.format(r[key])+'x';tr.append(cell);}
       for(const key of ['oldDd','newDd','avgPnl','latestPnl']){const cell=document.createElement('td'),grid=document.createElement('span');grid.className='tf-report-pnl-pair';const lines=metricLines(r,key);for(const text of lines){const part=document.createElement('span');part.textContent=text;grid.append(part);}cell.append(grid);cell.title=key.endsWith('Dd')?'PnL % (Akumulasi): jumlah PnL % trade pada rentang High → Low, bukan DD Baru ÷ DD Lama.':'';tr.append(cell);}
       body.append(tr);
@@ -108,7 +110,7 @@
     const styles='<?xml version="1.0"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="4">'+fonts+'</fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border/></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="4">'+xfs+'</cellXfs></styleSheet>';
     const cells=[tf_xlsxRowXml(1,columns.map((c,i)=>tf_xlsxCellXml(1,i,c[1],0)),{height:42})];const links=[];
     sortedRows.forEach((r,i)=>{const row=i+2,style=r.oldLoss===null?0:(r.severity||0)+1;cells.push(tf_xlsxRowXml(row,columns.map(([k],j)=>tf_xlsxCellXml(row,j,k==='severity'?(r.oldLoss===null?'—':['✓','!','×'][r.severity]):['avgPnl','latestPnl','oldDd','newDd'].includes(k)?metricLines(r,k).join('\n'):r[k],style)),{height:48}));if(r.url)links.push({row,url:r.url});});
-    const sheet='<?xml version="1.0"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" state="frozen"/></sheetView></sheetViews><cols><col min="1" max="1" width="10" customWidth="1"/><col min="2" max="2" width="25" customWidth="1"/><col min="3" max="8" width="23" customWidth="1"/></cols><sheetData>'+cells.join('')+'</sheetData><autoFilter ref="A1:H'+(sortedRows.length+1)+'"/>'+ (links.length?'<hyperlinks>'+links.map((l,i)=>'<hyperlink ref="B'+l.row+'" r:id="l'+i+'"/>').join('')+'</hyperlinks>':'')+'</worksheet>';
+    const sheet='<?xml version="1.0"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" state="frozen"/></sheetView></sheetViews><cols><col min="1" max="1" width="10" customWidth="1"/><col min="2" max="2" width="25" customWidth="1"/><col min="3" max="9" width="23" customWidth="1"/></cols><sheetData>'+cells.join('')+'</sheetData><autoFilter ref="A1:I'+(sortedRows.length+1)+'"/>'+ (links.length?'<hyperlinks>'+links.map((l,i)=>'<hyperlink ref="B'+l.row+'" r:id="l'+i+'"/>').join('')+'</hyperlinks>':'')+'</worksheet>';
     const entries=[{name:'[Content_Types].xml',data:'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>'},
     {name:'_rels/.rels',data:'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="r1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'},
     {name:'xl/workbook.xml',data:'<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Analis Report" sheetId="1" r:id="r1"/></sheets></workbook>'},
@@ -180,9 +182,9 @@
       e.preventDefault();e.stopImmediatePropagation();show(a===report);
     },true);
     addEventListener('popstate',()=>show(location.hash===hash,false));
-    if(location.hash===hash)show(true,false);
+    readMonths();if(location.hash===hash)show(true,false);
     if(globalThis.chrome?.storage?.onChanged)chrome.storage.onChanged.addListener((changes,area)=>{
-      if(area!=='local'||!active||!['tfHistorySignals','tfAnalystSources'].some(k=>k in changes)||scheduled)return;
+      if(area!=='local')return;if(changes.tfAnalystMonths){monthsByAnalyst=changes.tfAnalystMonths.newValue||{};if(active)render();}if(!active||!['tfHistorySignals','tfAnalystSources'].some(k=>k in changes)||scheduled)return;
       scheduled=true;setTimeout(()=>{scheduled=false;render();},200);
     });
     setInterval(()=>{
