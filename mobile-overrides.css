@@ -9560,3 +9560,11 @@ body.tf-risk-explainer-open{overflow:hidden!important;}
   white-space:nowrap!important;
 }
 #tf-analyst-report #tf-balance-cards412{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px;width:100%;}#tf-analyst-report #withdraw-rules-toggle-btn{display:none!important;}
+/* Native file-picker button must retain the hand cursor across its full hit area. */
+#tf-mobile-import-picker-v30,
+#tf-mobile-import-picker-v30 span,
+#tf-mobile-import-input,
+#tf-mobile-import-input::file-selector-button,
+#tf-mobile-import-input::-webkit-file-upload-button {
+  cursor: pointer !important;
+}
