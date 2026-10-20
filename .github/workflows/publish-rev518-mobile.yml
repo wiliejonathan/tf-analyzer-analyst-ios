@@ -1,8 +1,8 @@
-name: Publish mobile REV516
+name: Publish mobile REV518
 on:
   push:
     branches: [main]
-    paths: ['release-staging/REV516-mobile/READY']
+    paths: ['release-staging/REV518-mobile/READY']
 permissions:
   contents: write
 jobs:
@@ -26,12 +26,12 @@ jobs:
           CI=1 TF_REV419_ROOT=. node tests/test-switch502.cjs
           TF_REV419_ROOT=. node tests/test-stop502.cjs
           CI=1 TF_REV419_ROOT=. node tests/test-lot510.cjs
-          CI=1 TF_REV419_ROOT=. node tests/test-viewer516.cjs
-          CI=1 TF_REV419_ROOT=. node tests/test-integration516.cjs
+          CI=1 TF_REV419_ROOT=. node tests/test-viewer518.cjs
+          CI=1 TF_REV419_ROOT=. node tests/test-integration518.cjs
       - name: Release browser package
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          zip -qr /tmp/TF_Analyzer_Analyst_iOS_BROWSER_REV516.zip . -x '.git/*' '.github/*' 'release-staging/*' 'node_modules/*' 'package-lock.json' 'package.json'
-          gh release create v1.18.29 /tmp/TF_Analyzer_Analyst_iOS_BROWSER_REV516.zip --title 'REV516 · Per Analis risk 100%, 4Y and Switch' --notes-file release-staging/REV516-mobile/RELEASE_NOTES.md
+          zip -qr /tmp/TF_Analyzer_Analyst_iOS_BROWSER_REV518.zip . -x '.git/*' '.github/*' 'release-staging/*' 'node_modules/*' 'package-lock.json' 'package.json'
+          gh release create v1.18.31 /tmp/TF_Analyzer_Analyst_iOS_BROWSER_REV518.zip --title 'REV518 · Per Analis risk 100%, 4Y and Switch' --notes-file release-staging/REV518-mobile/RELEASE_NOTES.md
