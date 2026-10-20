@@ -202,3 +202,6 @@
   // App scripts are mounted after device activation, including DOMContentLoaded dispatch.
   const observer=new MutationObserver(()=>{if(!document.getElementById('tf-report-nav'))init();});observer.observe(document.body,{childList:true});
 })();
+
+// REV511: shared full-trade activity report, isolated styles and live dashboard math.
+(()=>{if(document.getElementById('tf-activity-report-loader'))return;const s=document.createElement('script');s.id='tf-activity-report-loader';s.src=document.currentScript?.src?new URL('tf-activity-report-bridge.js',document.currentScript.src).href:new URL('assets/tf-activity-report-bridge.js',location.href).href;document.head.append(s);})();
