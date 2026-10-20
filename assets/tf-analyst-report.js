@@ -15,7 +15,7 @@
       return dpp>0&&sl>0&&Number.isFinite(lot)&&lot>=0?lot*dpp:null;
     }catch{return null;}
   }
-  function moneyKey(){return ['balance-input','risk-input'].map(id=>document.getElementById(id)?.value||'').join('|')+'|'+(typeof currentBalance!=='undefined'?currentBalance:'')+'|'+(document.getElementById('pip-table-compact-body-left')?.textContent||'');}
+  function moneyKey(){return [currentBalance,currentRiskPercent,swapEnabled,swapRatePerLot,commissionEnabled,commissionRatePerLot].join('|')+'|'+['balance-input','risk-input'].map(id=>document.getElementById(id)?.value||'').join('|')+'|'+(typeof currentBalance!=='undefined'?currentBalance:'')+'|'+(document.getElementById('pip-table-compact-body-left')?.textContent||'');}
   // Same high-to-low dollar curve and signed trade-PnL-percent accumulation as Equity Curve.
   function drawdownMetrics(source){
     if(!source.length)return {pips:0,usd:0,pct:0};
@@ -203,5 +203,5 @@
   const observer=new MutationObserver(()=>{if(!document.getElementById('tf-report-nav'))init();});observer.observe(document.body,{childList:true});
 })();
 
-// REV512: shared full-trade activity report, isolated styles and live dashboard math.
+// REV514: shared full-trade activity report, isolated styles and live dashboard math.
 (()=>{if(document.getElementById('tf-activity-report-loader'))return;const s=document.createElement('script');s.id='tf-activity-report-loader';s.src=document.currentScript?.src?new URL('tf-activity-report-bridge.js',document.currentScript.src).href:new URL('assets/tf-activity-report-bridge.js',location.href).href;document.head.append(s);})();
