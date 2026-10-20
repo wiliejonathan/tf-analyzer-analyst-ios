@@ -28,7 +28,7 @@ let responsiveFrame=0;const resizeReport=()=>{cancelAnimationFrame(responsiveFra
 document.addEventListener('pointerdown',e=>{if(!e.target.closest('.plot,.monthsvg svg,#dailyPerformance svg,.tip')){hideTip();document.querySelectorAll('.chart-crosshair').forEach(x=>x.style.display='none');document.querySelectorAll('.hour-crosshair').forEach(x=>x.hidden=true);}});
 
 window.__reportTest=()=>({state:{...state},rows:filtered.length,net:filtered.reduce((s,r)=>s+r.p,0),days:daily.size,hourCount:hours.reduce((s,h)=>s+h.count,0),profit:hours.reduce((s,h)=>s+h.profit,0),loss:hours.reduce((s,h)=>s+h.loss,0),pairs:[...new Set(filtered.map(r=>r.pair))]});
-/* REV514 full-trade report. Data and dollar PnL are supplied by the dashboard math bridge. */
+/* REV516 full-trade report. Data and dollar PnL are supplied by the dashboard math bridge. */
 let reportViewport=null;let reportConfig={balance:10000,risk:1,swapOn:false,swap:9.01,commOn:false,comm:20},configKey='',reportEmbedded=false,reportReady=false;
 function resultClass(v){return v>1e-9?'positive':v< -1e-9?'negative':'neutral';}
 function datum(r){return curveUnit==='usd'?r.u:r.p;}
@@ -60,7 +60,7 @@ if(window!==parent){reportEmbedded=true;parent.postMessage({type:'TF_ACTIVITY_RE
 
 function moveTip(e){const t=$('tooltip'),vp=reportViewport||{top:0,bottom:innerHeight,left:0,right:innerWidth},left=Math.max(8,vp.left+8),top=Math.max(8,vp.top+8),right=Math.max(left,vp.right-t.offsetWidth-8),bottom=Math.max(top,vp.bottom-t.offsetHeight-8);t.style.left=Math.min(Math.max(e.clientX+12,left),right)+'px';t.style.top=Math.min(Math.max(e.clientY+14,top),bottom)+'px';}
 
-// REV514: actual calendar-month returns plus recurrence across years.
+// REV516: actual calendar-month returns plus recurrence across years.
 function drawMonthPerformance(){
  const host=$('monthPerformance'),list=rawMonthList();let acc=0;
  const values=list.map(key=>{const rows=filtered.filter(r=>r[state.basis].startsWith(key)),net=rows.reduce((s,r)=>s+datum(r),0);acc+=net;return {key,rows,net,acc};});
@@ -154,4 +154,27 @@ function drawMonthlyR(){
  for(const el of host.querySelectorAll('[data-r-hover]')){const v=values.find(v=>v.key===el.dataset.rHover),ratio=v.rr.ratio===null?'—':new Intl.NumberFormat('id-ID',{maximumFractionDigits:3}).format(v.rr.ratio);bindTip(el,`<b>${monthTitle(v.key)} · ${esc(state.pair)}</b>TP ${v.tp} · SL ${v.sl}<br>RR 6 bulan ${v.rr.ratio===null?'belum tersedia':'1 : '+ratio}<br>${v.r===null?'Perlu trade TP dan SL pada periode RR.':`(TP ${v.tp} × ${ratio}) − SL ${v.sl} = <strong class="${resultClass(v.r)}">${signedR(v.r)} R</strong>`}<br>${monthTitle(v.rr.start.slice(0,7))} – ${monthTitle(v.key)} · ${v.rr.count} trade acuan`);el.onclick=()=>showDetail(v.rows,monthTitle(v.key)+' · R berbobot RR',el);}
  const known=values.filter(v=>v.r!==null),total=known.reduce((s,v)=>s+v.r,0),missing=values.filter(v=>v.r===null).length;
  footer.innerHTML=`<span>Total R ${missing?'terhitung · ':''}periode terpilih <b class="${known.length?resultClass(total):'neutral'}" data-total-r="${known.length?total:''}">${known.length?signedR(total)+' R':'—'}</b></span><span>${values.length} bulan${missing?' · '+missing+' bulan belum ada RR, belum termasuk total':''}</span>`;
+}
+
+// Monday-aligned month rows: six fixed weeks, with empty cells outside each month.
+function calendar(){
+ const dates=[...daily.keys()].sort();if(!dates.length){$('heat').innerHTML='<tr><td class="emptymsg">Tidak ada transaksi.</td></tr>';$('daySummary').textContent='';return;}
+ const weekdays=['M','T','W','T','F','S','S'],labels=['Monday / Senin','Tuesday / Selasa','Wednesday / Rabu','Thursday / Kamis','Friday / Jumat','Saturday / Sabtu','Sunday / Minggu'];
+ const values=[...daily.values()].map(d=>curveUnit==='usd'?(d.usdOK?d.usd:null):d.net),pos=Math.max(1,...values.filter(Number.isFinite)),neg=Math.max(1,...values.filter(Number.isFinite).map(v=>-v));
+ let html='<thead><tr><th class="calendar-month-col" scope="col">Bulan / hari</th>'+Array.from({length:42},(_,i)=>`<th scope="col" class="calendar-weekday ${i%7===0?'weekday-monday':''}" title="${labels[i%7]}" aria-label="${labels[i%7]}, pekan ${Math.floor(i/7)+1}">${weekdays[i%7]}</th>`).join('')+'</tr></thead><tbody>';
+ let [year,month]=dates[0].slice(0,7).split('-').map(Number),end=dates.at(-1).slice(0,7),last='';
+ while(`${year}-${String(month).padStart(2,'0')}`<=end){
+  if(last!==String(year)){html+=`<tr class="yearline"><td colspan="43">${year}</td></tr>`;last=String(year);}
+  const offset=(new Date(Date.UTC(year,month-1,1)).getUTCDay()+6)%7,count=new Date(Date.UTC(year,month,0)).getUTCDate(),mk=`${year}-${String(month).padStart(2,'0')}`;
+  html+=`<tr class="calendar-month-row" data-calendar-month="${mk}"><td>${months[month-1]} ${year}</td>`;
+  for(let slot=0;slot<42;slot++){
+   const day=slot-offset+1;if(day<1||day>count){html+='<td class="calendar-pad-cell" aria-hidden="true"><span class="calendar-pad"></span></td>';continue;}
+   const key=`${mk}-${String(day).padStart(2,'0')}`,data=daily.get(key),v=data?(curveUnit==='usd'?(data.usdOK?data.usd:null):data.net):null;let cl=!data?'no':v===null?'missing':Math.abs(v)<1e-9?'zero':'',style='';
+   if(data&&Number.isFinite(v)&&Math.abs(v)>1e-9){const t=Math.sqrt(Math.abs(v)/(v>0?pos:neg));style=`background:linear-gradient(135deg,hsl(${v>0?155:346} 64% ${25+14*t}%),hsl(${v>0?155:346} 62% ${21+13*t}%));`;}
+   html+=`<td><button class="day ${cl}" style="${style}" data-day="${key}" data-date="${day}" data-weekday="${slot%7}" aria-label="${labels[slot%7]}; ${dateLabel(key)}; ${data?data.rows.length+' transaksi; '+amount(v):'tanpa transaksi'}"></button></td>`;
+  }
+  html+='</tr>';if(++month>12){month=1;year++;}
+ }
+ $('heat').innerHTML=html+'</tbody>';let win=0,loss=0,zero=0;for(const v of values)if(Number.isFinite(v)){if(v>1e-9)win++;else if(v< -1e-9)loss++;else zero++;}$('daySummary').textContent=`${win} hari profit · ${loss} hari loss · ${zero} hari net 0`;
+ for(const button of $('heat').querySelectorAll('[data-day]')){const key=button.dataset.day,d=daily.get(key);bindTip(button,`<b>${labels[Number(button.dataset.weekday)].split(' / ')[1]} · ${dateLabel(key)}</b>${d?`${d.rows.length} transaksi<br><span class="${resultClass(d.net)}">${signed(d.net)} pips</span><br><span class="${d.usdOK?resultClass(d.usd):'neutral'}">${d.usdOK?money(d.usd):'Dollar belum tersedia'}</span>`:'Tanpa transaksi'}`);button.onclick=()=>showDetail(d?.rows||[],dateLabel(key),button);}
 }
