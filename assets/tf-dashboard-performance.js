@@ -7,7 +7,7 @@
  #tf-dashboard-main .table-wrapper,#tf-dashboard-main .tf-holding-card{transition:none!important;}
  #tf-dashboard-main table th,#tf-dashboard-main table td{text-shadow:none!important;box-shadow:none!important;transition:none!important;}
  .tf-mobile-appbar,.tf-mobile-bottom-nav,#tf-mobile-bottom-nav{-webkit-backdrop-filter:none!important;backdrop-filter:none!important;}
- @supports(content-visibility:auto){#section-monthly,#section-history,#tf-score-history-section{content-visibility:auto;contain-intrinsic-block-size:auto 900px;}}
+ #section-monthly,#section-history,#tf-score-history-section{content-visibility:visible!important;contain:none!important;contain-intrinsic-size:none!important;}
  } @media print {#section-monthly,#section-history,#tf-score-history-section{content-visibility:visible!important;contain-intrinsic-block-size:none!important;}}`;
  document.head.append(style);
 })();

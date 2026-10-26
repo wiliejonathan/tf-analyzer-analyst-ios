@@ -2,19 +2,32 @@ document.body.innerHTML = "\n<!-- Scan Animation Overlay (shown before dashboard
 document.body.classList.add('tf-risk-explainer-open');
 document.getElementById('tf-risk-explainer-understand').addEventListener('click',()=>{document.getElementById('tf-risk-explainer')?.remove();document.body.classList.remove('tf-risk-explainer-open');},{once:true});
 
-/* MOBILE PROTOTYPE: production activation gate intentionally removed.
-   The APK prototype is local/import-only, per requested scope. */
-window.tfRequireLicense = async function(){ return { valid:true, mobilePrototype:true }; };
-window.tfRequireServerCheckOnly = async function(){ return { valid:true, mobilePrototype:true }; };
-window.tfValidateSavedLicense = async function(){ return { valid:true, mobilePrototype:true }; };
-window.tfRefreshLicenseStatus = async function(){ return { valid:true, mobilePrototype:true }; };
-window.tfLicenseApiUrl = '';
-window.tfGetLicenseResult = function(){ return { valid:true, status:'ACTIVE', mobilePrototype:true }; };
-window.tfGetISignalUsersAccessState = function(){
-  return { known:true, access:false, reason:'MOBILE_NOT_INCLUDED' };
-};
-document.documentElement.setAttribute('data-tf-server-authorized','1');
-document.documentElement.setAttribute('data-tf-license','valid');
+// Mobile access delegates to the existing server-validated mobile-license-gate.js session.
+// This bridge never grants access without the active gate state and credentials.
+function tf_mobileLicenseState524(){
+ const auth=window.__TF_MOBILE_AUTH_V349,state=auth&&auth.state;
+ const expiry=state&&!state.isPermanent&&state.expiresAt?Date.parse(state.expiresAt):NaN;
+ if(!auth||!auth.email||!auth.token||!state||state.valid!==true||state.sessionValid===false||(Number.isFinite(expiry)&&expiry<=Date.now()))return {valid:false,status:'ACTIVATION_REQUIRED'};
+ return {...state,valid:true};
+}
+async function tf_mobileRequireLicense524(){
+ if(typeof window.tfMobileValidateLicenseNow==='function'){try{await window.tfMobileValidateLicenseNow();}catch{}}
+ return tf_mobileLicenseState524();
+}
+window.tfRequireLicense=tf_mobileRequireLicense524;
+window.tfRequireServerCheckOnly=tf_mobileRequireLicense524;
+window.tfValidateSavedLicense=tf_mobileRequireLicense524;
+window.tfRefreshLicenseStatus=tf_mobileRequireLicense524;
+window.tfGetLicenseResult=tf_mobileLicenseState524;
+window.tfLicenseApiUrl='';
+window.tfGetISignalUsersAccessState=function(){return {known:true,access:false,reason:'MOBILE_NOT_INCLUDED'};};
+if(tf_mobileLicenseState524().valid===true){
+ document.documentElement.setAttribute('data-tf-server-authorized','1');
+ document.documentElement.setAttribute('data-tf-license','valid');
+}else{
+ document.documentElement.removeAttribute('data-tf-server-authorized');
+ document.documentElement.setAttribute('data-tf-license','locked');
+}
 
 window.trackInvestingProTopMenuLogoClick = window.trackInvestingProTopMenuLogoClick || function () {
 };
@@ -1163,6 +1176,18 @@ updateSelectedPairs();
 let __tfAnalystFilterOutsideClickInstalled = false;
 let __tfAnalystTickerDefaultAppliedStats = false;
 let __tfAnalystTickerDefaultAppliedHistory = false;
+// Commit checkbox state immediately; rebuild views only after the input event finishes.
+let tfFilterFrame524=0,tfFilterPending524=null;
+function tf_scheduleFilterRefresh524(apply,container,openAnalysts){
+ tfFilterPending524={apply,container,openAnalysts};if(tfFilterFrame524)return;
+ tfFilterFrame524=requestAnimationFrame(()=>{tfFilterFrame524=0;const pending=tfFilterPending524;tfFilterPending524=null;if(!pending)return;
+  if(typeof pending.apply==='function')pending.apply();setupAnalystTickerFilter();
+  for(const menu of pending.container.querySelectorAll('.analyst-filter-item .sub-menu[data-analyst]'))if(pending.openAnalysts.includes(menu.getAttribute('data-analyst'))){menu.style.display='block';const arrow=menu.closest('li')?.querySelector('span.analyst-filter-arrow');if(arrow)arrow.textContent='▼';}
+ });
+}
+function tf_historyVisible524(box){if(document.hidden||!box?.isConnected)return false;const r=box.getBoundingClientRect();return r.width>0&&r.height>0&&r.bottom>0&&r.top<innerHeight;}
+let tfHistoryVisibilityFrame524=0;
+function tf_scheduleHistoryVisibility524(){if(tfHistoryVisibilityFrame524)return;tfHistoryVisibilityFrame524=requestAnimationFrame(()=>{tfHistoryVisibilityFrame524=0;tf_applyHistoryColumnVisibility();});}
 function tf_buildAnalystTickerFilterGroup(opts) {
 const containers = Array.isArray(opts && opts.containers) ? opts.containers : [];
 const analystNames = Array.isArray(opts && opts.analystNames) ? opts.analystNames : [];
@@ -1407,27 +1432,17 @@ if (typeof setGlobalState === 'function')
 setGlobalState(nextGlobal);
 if (typeof setState === 'function')
 setState(nextPairs);
-if (typeof applyFn === 'function')
-applyFn();
-setupAnalystTickerFilter();
-try {
-const menus = container.querySelectorAll('.analyst-filter-item .sub-menu[data-analyst]');
-menus.forEach((m) => {
-const a = m.getAttribute('data-analyst');
-if (!a)
-return;
-if (__openAnalysts.indexOf(a) !== -1) {
-m.style.display = 'block';
-const li = m.closest('.analyst-filter-item');
-const ar = li ? li.querySelector('span.analyst-filter-arrow') : null;
-if (ar) {
-ar.classList.add('open');
-ar.setAttribute('aria-expanded', 'true');
+// Keep the existing checkbox nodes synchronized until the deferred refresh runs.
+for(const target of containers){
+ for(const checkbox of target.querySelectorAll('input[data-analyst]')){
+  const name=checkbox.getAttribute('data-analyst'),pair=checkbox.getAttribute('data-pair'),enabled=nextGlobal[name]===true,allowed=nextPairs[name]||[],pairs=getPairsList(name);
+  if(!pair){checkbox.checked=enabled;continue;}
+  checkbox.disabled=!enabled||(pair==='__ALL__'&&forceUncheckNoValue&&pairs.every(p=>isNoValuePair(name,p)));
+  checkbox.checked=enabled&&(pair==='__ALL__'?pairs.length>0&&pairs.every(p=>allowed.includes(p)):allowed.includes(pair));
+ }
+ const all=target.querySelector('input[type="checkbox"]:not([data-analyst])');if(all)all.checked=analystNames.length>0&&analystNames.every(name=>nextGlobal[name]===true);
 }
-}
-});
-}
-catch (e) { }
+tf_scheduleFilterRefresh524(applyFn,container,__openAnalysts);
 }
 allCb.addEventListener('change', () => {
 const checked = !!allCb.checked;
@@ -1976,8 +1991,7 @@ function applyAnalystPairFilterHistory() {
 applyAnalystPairFilterAll();
 }
 function applyAnalystPairFilter() {
-applyAnalystPairFilterStats();
-applyAnalystPairFilterHistory();
+applyAnalystPairFilterAll();
 }
 function applyPairFilter() {
 applyAnalystPairFilterAll();
@@ -6645,7 +6659,7 @@ tf_getHistoryColumnVisibility()[col.key] = !!cb.checked;
 tf_saveHistoryColumnVisibility();
 tf_applyHistoryColumnVisibility();
 try {
-requestAnimationFrame(() => tf_applyHistoryColumnVisibility());
+tf_scheduleHistoryVisibility524();
 }
 catch (e) { }
 });
@@ -6657,7 +6671,7 @@ TF_HISTORY_COLUMN_OPTIONS.forEach((col) => { visibility[col.key] = checked; });
 tf_saveHistoryColumnVisibility();
 tf_applyHistoryColumnVisibility();
 try {
-requestAnimationFrame(() => tf_applyHistoryColumnVisibility());
+tf_scheduleHistoryVisibility524();
 }
 catch (e) { }
 });
@@ -7837,7 +7851,7 @@ try {
         if (historyScrollBox.__tfMobileHistoryScrollRaf) return;
         historyScrollBox.__tfMobileHistoryScrollRaf = requestAnimationFrame(() => {
           historyScrollBox.__tfMobileHistoryScrollRaf = 0;
-          if (historyScrollBox.__tfMobileHistoryScrollBusy) return;
+          if (historyScrollBox.__tfMobileHistoryScrollBusy || !tf_historyVisible524(historyScrollBox)) return;
           if (historyScrollBox.scrollTop > 140) return;
           if (tfMobileHistoryRenderedStart <= 0) return;
 
@@ -7894,7 +7908,7 @@ try {
 
 try {
 tf_applyHistoryColumnVisibility();
-requestAnimationFrame(() => tf_applyHistoryColumnVisibility());
+tf_scheduleHistoryVisibility524();
 }
 catch (e) { }
 computeAndRenderDrawdownStats(rowsForCalc.filter(r => !r.isWithdraw));
@@ -13743,8 +13757,9 @@ return false;
 document.addEventListener('DOMContentLoaded', async () => {
 if (window.tfIntegrityReady && !(await window.tfIntegrityReady))
 return;
-// MOBILE PRIVATE PROTOTYPE: activation intentionally disabled.
-const __tfLicenseAllowed = true;
+// The existing mobile gate must authorize this dashboard before initialization.
+const __tfLicenseAllowed = tf_mobileLicenseState524().valid === true;
+if (!__tfLicenseAllowed) return;
 const __tfEarlyPageMode = (document.body && (document.body.getAttribute('data-page') || (document.body.dataset ? document.body.dataset.page : ''))) || '';
 if (__tfEarlyPageMode === 'isignal-users') {
 tf_isignalUsers_startPremiumWatcher();
