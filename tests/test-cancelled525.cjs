@@ -22,6 +22,13 @@ const roots=process.env.TF_REV419_ROOT?[process.env.TF_REV419_ROOT]:['outputs/TF
    recomputeHistoryRows();return {before,after:JSON.stringify(lastHistoryRowsForExport),raw:historySignals.length};
   });
   assert.equal(result.before,result.after,'Cancelled must never alter executed trade calculations');assert.equal(result.raw,3);
+  const loaded=await page.evaluate(async()=>{
+   const raw=historySignals.slice(),data={tfHistorySignals:raw,tfAvgSlPips:{Synthetic:{XAUUSD:200}},tfMonthlyStats:{},tfAnalystSources:{Synthetic:{pairs:['XAUUSD']}}};
+   window.chrome={storage:{local:{get:(keys,cb)=>{if(cb)cb(data);return Promise.resolve(data);},set:(value,cb)=>{cb?.();return Promise.resolve();}},onChanged:{addListener(){}}}};
+   await loadFromChromeStorageIfAvailable();
+   return {count:historySignals.length,cancelled:historySignals.filter(tf_isCancelled525).length,pips:historySignals.find(tf_isCancelled525)?.pips,calculated:lastHistoryRowsForExport.length};
+  });
+  assert.deepEqual(loaded,{count:3,cancelled:1,pips:null,calculated:2},'actual Chrome storage reload must retain Cancelled without coercing it to zero');
   assert.equal(await page.locator('#tf-show-cancelled525').isChecked(),false);assert.equal(await page.locator('[data-cancelled]').count(),0);
   await page.locator('#tf-show-cancelled525').evaluate(e=>{e.checked=true;e.dispatchEvent(new Event('change'));});
   const row=page.locator('[data-cancelled]');assert.equal(await row.count(),1);assert.equal(await row.locator('input').isChecked(),false);assert.equal(await row.locator('input').isDisabled(),true);

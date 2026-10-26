@@ -13,7 +13,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Verify mobile
+      - name: Verify mobile scripts, licenses and import rules
+        timeout-minutes: 2
         run: |
           set -euo pipefail
           node --check assets/dashboard-mobile.js
@@ -21,18 +22,66 @@ jobs:
           node --check mobile-license-gate.js
           node --check service-worker.js
           node --test tests/activation404.cjs tests/import407.cjs tests/risk433.cjs tests/performance406.cjs tests/equity412.cjs tests/animation414.cjs tests/test-license-bridge525.cjs
+      - name: Install browser test runtime
+        timeout-minutes: 3
+        run: |
+          set -euo pipefail
           npm install --no-save playwright
           npx playwright install --with-deps chromium
+      - name: tests/test-switch502.cjs
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
           CI=1 TF_REV419_ROOT=. node tests/test-switch502.cjs
+      - name: tests/test-stop502.cjs
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
           TF_REV419_ROOT=. node tests/test-stop502.cjs
+      - name: tests/test-lot510.cjs
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
           CI=1 TF_REV419_ROOT=. node tests/test-lot510.cjs
+      - name: tests/test-viewer525.cjs
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
           CI=1 TF_REV419_ROOT=. node tests/test-viewer525.cjs
+      - name: tests/test-integration525.cjs
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
           CI=1 TF_REV419_ROOT=. node tests/test-integration525.cjs
+      - name: tests/test-performance525.cjs
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
           CI=1 TF_REV419_ROOT=. node tests/test-performance525.cjs
+      - name: tests/test-opened525.cjs
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
           CI=1 TF_REV419_ROOT=. node tests/test-opened525.cjs
+      - name: tests/test-cancelled525.cjs
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
           CI=1 TF_REV419_ROOT=. node tests/test-cancelled525.cjs
+      - name: tests/test-history525.cjs
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
           CI=1 TF_REV419_ROOT=. node tests/test-history525.cjs
+      - name: tests/test-smooth525.cjs
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
           CI=1 TF_REV419_ROOT=. node tests/test-smooth525.cjs
+      - name: tests/test-stability525.cjs
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
           CI=1 TF_REV419_ROOT=. node tests/test-stability525.cjs
       - name: Release browser package
         env:

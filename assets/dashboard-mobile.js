@@ -12344,13 +12344,13 @@ const item = historyInput[i];
 if (!item || !item.analyst)
 continue;
 const parsedPips = (typeof item.pips === 'number') ? item.pips : parseFloat(item.pips);
-if (!Number.isFinite(parsedPips))
+if (!Number.isFinite(parsedPips) && !tf_isCancelled525(item))
 continue;
 historySignals.push({
 ...item,
 analyst: item.analyst,
 pair: item.pair,
-pips: parsedPips,
+pips: tf_isCancelled525(item) ? null : parsedPips,
 displayDate: normalizeWIBSuffix(item.displayDate),
 sortKey: item.sortKey,
 openedDate: normalizeWIBSuffix(item.openedDate),
