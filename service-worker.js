@@ -1,4 +1,4 @@
-const CACHE='tf-analyzer-analyst-mobile-rev525-four-month-risk';
+const CACHE='tf-analyzer-analyst-mobile-rev525-cancelled-storage-final';
 const ASSETS=[
  './assets/tf-activity-report.html',
  './assets/tf-activity-report.js',
@@ -28,7 +28,7 @@ const ASSETS=[
   './mobile-import-fix-v30.js?rev=525',
   './mobile-overrides.css?rev=525'
 ];
-self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
+self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS.map(url=>new Request(url,{cache:'reload'})))).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 
 async function networkFirst(req){
@@ -82,5 +82,3 @@ self.addEventListener('notificationclick', event => {
 
 
 // REV381: Mobile-only parity with official PC REV379 canonical export data.
-
-

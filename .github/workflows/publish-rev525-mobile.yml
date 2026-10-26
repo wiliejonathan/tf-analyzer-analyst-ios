@@ -89,4 +89,9 @@ jobs:
         run: |
           set -euo pipefail
           zip -qr /tmp/TF_Analyzer_Analyst_iOS_BROWSER_REV525.zip . -x '.git/*' '.github/*' 'release-staging/*' 'node_modules/*' 'package-lock.json' 'package.json'
-          gh release create v1.18.38 /tmp/TF_Analyzer_Analyst_iOS_BROWSER_REV525.zip --title 'REV525 · Smooth continuous history and risk updates' --notes-file release-staging/REV525-mobile/RELEASE_NOTES.md
+          if gh release view v1.18.38 >/dev/null 2>&1; then
+            gh release edit v1.18.38 --target "$GITHUB_SHA" --title 'REV525 · Cancelled history and swipe navigation' --notes-file release-staging/REV525-mobile/RELEASE_NOTES.md --latest
+            gh release upload v1.18.38 /tmp/TF_Analyzer_Analyst_iOS_BROWSER_REV525.zip --clobber
+          else
+            gh release create v1.18.38 /tmp/TF_Analyzer_Analyst_iOS_BROWSER_REV525.zip --target "$GITHUB_SHA" --title 'REV525 · Cancelled history and swipe navigation' --notes-file release-staging/REV525-mobile/RELEASE_NOTES.md --latest
+          fi

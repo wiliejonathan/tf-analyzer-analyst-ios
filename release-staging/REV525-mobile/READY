@@ -1,1 +1,1 @@
-REV525 complete: retain Cancelled with null PnL across actual storage reload; preserve cache identity and executed-only calculations.
+REV525 final verified Cancelled storage, source-preserving risk cache and refreshed offline cache.
