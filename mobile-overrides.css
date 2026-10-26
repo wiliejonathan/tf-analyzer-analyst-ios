@@ -9837,7 +9837,7 @@ body #tf-dashboard-main :is(#section-history,#equity-curve-section) :is(#withdra
 
 
 
-/* REV524: identical full-width analyst grids on all analysis screens. */
+/* REV525: identical full-width analyst grids on all analysis screens. */
 body #tf-dashboard-main :is(#tf-analyst-filter-row-table1,#tf-analyst-filter-row-holding,#analyst-filter-row,#analyst-filter-row-monthly,#analyst-filter-row-history,#analyst-filter-row-equity){
  display:block!important;width:100%!important;min-width:0!important;max-width:none!important;
 }
@@ -9860,3 +9860,12 @@ body #tf-dashboard-main [id^="analyst-filter-container"]>.analyst-filter-list>.a
 body #tf-dashboard-main [id^="analyst-filter-container"] .analyst-filter-arrow{flex:0 0 auto!important;margin-left:0!important;}
 @media(min-width:641px){body #tf-dashboard-main [id^="analyst-filter-container"]>.analyst-filter-list{grid-template-columns:repeat(3,minmax(0,1fr))!important;}}
 @media(min-width:900px){body #tf-dashboard-main [id^="analyst-filter-container"]>.analyst-filter-list{grid-template-columns:repeat(4,minmax(0,1fr))!important;}}
+
+/* One row on phones, tablets and landscape screens. */
+#tf-mobile-bottom-nav {overflow:hidden!important;height:calc(66px + env(safe-area-inset-bottom,0px))!important;}
+#tf-mobile-bottom-nav .tf-mobile-nav-scroller {display:flex!important;flex-flow:row nowrap!important;grid-template-columns:none!important;overflow-x:auto!important;overflow-y:hidden!important;justify-content:flex-start!important;width:100%!important;max-width:100%!important;scrollbar-width:none;min-height:60px!important;padding:0 13px!important;box-sizing:border-box;}
+#tf-mobile-bottom-nav .tf-mobile-nav-scroller::-webkit-scrollbar {display:none;}
+#tf-mobile-bottom-nav .tf-mobile-nav-item {flex:0 0 78px!important;min-width:78px!important;max-width:110px!important;white-space:nowrap!important;}
+.tf-nav-hint525 {display:none;position:absolute;top:18px;color:#77d6ff;font-size:21px;pointer-events:none;z-index:20;text-shadow:0 1px 5px #000;}
+.tf-nav-hint525.left {left:2px;} .tf-nav-hint525.right {right:2px;}
+#tf-mobile-bottom-nav.has-left525 .tf-nav-hint525.left,#tf-mobile-bottom-nav.has-right525 .tf-nav-hint525.right {display:block;}

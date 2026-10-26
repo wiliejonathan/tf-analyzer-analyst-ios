@@ -1657,6 +1657,7 @@ pairsByAnalystHistory[name].add(pp);
 }
 if (Array.isArray(historySignals)) {
 historySignals.forEach((item) => {
+if(tf_isCancelled525(item)) return;
 if (!item || !item.analyst)
 return;
 const name = item.analyst;
@@ -2078,6 +2079,7 @@ nameSet.add(name);
 }
 if (Array.isArray(historySignals)) {
 historySignals.forEach((item) => {
+if(tf_isCancelled525(item)) return;
 if (item && item.analyst) {
 nameSet.add(item.analyst);
 }
@@ -2095,6 +2097,7 @@ pairs = src.pairs.slice();
 else if (Array.isArray(historySignals)) {
 const pairSet = new Set();
 historySignals.forEach((item) => {
+if(tf_isCancelled525(item)) return;
 if (item && item.analyst === baseName && item.pair) {
 pairSet.add(item.pair);
 }
@@ -2156,6 +2159,7 @@ let fixedCutoffTs = null;
 try {
 let maxTs = null;
 (Array.isArray(historySignals) ? historySignals : []).forEach((it) => {
+if(tf_isCancelled525(it)) return;
 if (!it || it.analyst !== analystName)
 return;
 if (pairUpper) {
@@ -2209,6 +2213,7 @@ const decSumByInt = Object.create(null);
 let sumAbs = 0;
 let count = 0;
 historySignals.forEach((item) => {
+if(tf_isCancelled525(item)) return;
 if (!item || item.analyst !== analystName)
 return;
 if (pairUpper) {
@@ -3552,6 +3557,7 @@ return false;
 }
 }
 function tf_isHistoryRowEligibleForAllToggle(row) {
+if (tf_isCancelled525(row)) return false;
 try {
 if (!row)
 return false;
@@ -4577,7 +4583,7 @@ result.forEach(g=>{
 
 function tf_refreshLatestRiskState(force) {
 try {
-const src = Array.isArray(historySignals) ? historySignals : [];
+const src = Array.isArray(historySignals) ? historySignals.filter(row => !tf_isCancelled525(row)) : [];
 if(!force && __tfRiskTaskReady && __tfRiskTaskSource===src && __tfRiskTaskLength===src.length)return __tfLatestRiskState;
 __tfRiskTaskSource=src;__tfRiskTaskLength=src.length;__tfRiskTaskReady=true;
 Promise.resolve().then(()=>{__tfRiskTaskReady=false;});
@@ -6619,7 +6625,50 @@ startCell.colSpan = Math.max(1, visibleCount + 1);
 }
 catch (e) { }
 }
+function tf_isCancelled525(row) {
+return !!row && (row.isCancelled === true || /^cancelled$/i.test(String(row.status || row.tradeStatus || row.result || '').trim()));
+}
+function tf_setupCancelled525() {
+const root = document.getElementById('history-column-filter');
+if (!root || document.getElementById('tf-show-cancelled525')) return;
+const label = document.createElement('label');
+label.style.cssText = 'display:inline-flex;align-items:center;gap:6px;margin:6px 10px';
+const cb = document.createElement('input'); cb.type = 'checkbox'; cb.id = 'tf-show-cancelled525';
+// A fresh session starts with cancelled orders hidden.
+cb.checked = false;
+label.append(cb, document.createTextNode('Tampilkan Cancelled'));
+root.insertAdjacentElement('afterend', label);
+cb.addEventListener('change', () => recomputeHistoryRows());
+}
+function tf_cancelledRow525(row) {
+const tr = document.createElement('tr');
+tr.className = 'tf-row-disabled tf-cancelled-row'; tr.dataset.cancelled = 'true'; tr.title = 'Cancelled — tidak dihitung sebagai trade';
+const first = document.createElement('td'), cb = document.createElement('input');
+cb.type = 'checkbox'; cb.checked = false; cb.disabled = true; cb.setAttribute('aria-label', 'Cancelled, tidak dieksekusi');
+first.append(cb); tr.append(first);
+for (const col of TF_HISTORY_COLUMN_OPTIONS) {
+ const td = tf_markHistoryCell(document.createElement('td'), col.key);
+ td.textContent = ({created: row.createdDate, opened: row.openedDate, closed: row.displayDate})[col.key] || '—';
+ tr.append(td);
+}
+return tr;
+}
+function tf_cancelledDisplay525(rows, maxMonthIdx) {
+if (!document.getElementById('tf-show-cancelled525')?.checked) return rows;
+let cancelled = (Array.isArray(historySignals) ? historySignals : []).filter(row => {
+ if (!tf_isCancelled525(row) || !tf_isAnalystGloballySelected(row.analyst || '')) return false;
+ const pair = String(row.pair || '').toUpperCase();
+ if (Array.isArray(selectedPairs) && selectedPairs.length && !selectedPairs.includes(pair)) return false;
+ const allowed = tf_getAllowedPairsOrNull(selectedAnalystPairsMapHistory, row.analyst || '');
+ return !Array.isArray(allowed) || allowed.some(p => tf_normPairKey(p) === tf_normPairKey(pair));
+});
+cancelled = tf_filterRowsByTradeTimeRange(cancelled, maxMonthIdx);
+cancelled = tf_filterRowsByUnifiedDate(cancelled);
+return rows.concat(cancelled).sort((a,b) => (Number(a.sortKey) || 0) - (Number(b.sortKey) || 0));
+}
+
 function setupHistoryColumnFilter() {
+tf_setupCancelled525();
 const root = document.getElementById('history-column-filter');
 const button = document.getElementById('history-column-filter-btn');
 const menu = document.getElementById('history-column-filter-menu');
@@ -6719,6 +6768,7 @@ if (!Array.isArray(historySignals))
 return [];
 const set = new Set();
 historySignals.forEach((item) => {
+if(tf_isCancelled525(item)) return;
 if (item && item.analyst) {
 set.add(item.analyst);
 }
@@ -6839,6 +6889,7 @@ return trStart;
 }
 
 function tfMobileCreateHistoryRow(row, startingBalance, priceBusy) {
+if(tf_isCancelled525(row)) return tf_cancelledRow525(row);
 const isWithdrawRow = !!(row && row.isWithdraw);
 const tr = document.createElement('tr');
 if (isWithdrawRow) {
@@ -7160,7 +7211,7 @@ slPips = 0;
 slPipsCache.set(key, slPips);
 return slPips;
 }
-let baseRows = (Array.isArray(historySignals) ? historySignals : [])
+let baseRows = (Array.isArray(historySignals) ? historySignals : []).filter(item => !tf_isCancelled525(item))
 .map((item) => {
 if (!item)
 return null;
@@ -7214,7 +7265,7 @@ lotFixed: lotFixed
 };
 })
 .filter(Boolean);
-tf_monthRiskBlocked = tf_computeMonthlyRiskStop(baseRows, historySignals, tf_monthRiskSettings());
+tf_monthRiskBlocked = tf_computeMonthlyRiskStop(baseRows, historySignals.filter(row => !tf_isCancelled525(row)), tf_monthRiskSettings());
 let minMonthIdx = null;
 let maxMonthIdx = null;
 try {
@@ -7612,7 +7663,8 @@ try {
 tf_renderAnalystPerformanceTablesFromRows(rowsForCalc);
 }
 catch (e) { }
-tfMobileHistoryTotalRows = Array.isArray(rowsForUi) ? rowsForUi.length : 0;
+const displayRows525 = tf_cancelledDisplay525(rowsForUi,maxMonthIdx);
+tfMobileHistoryTotalRows = displayRows525.length;
 try { tf_applyHistoryColumnVisibility(); } catch (e) { }
 if (!Number.isFinite(tfMobileHistoryRenderLimit) || tfMobileHistoryRenderLimit < TF_MOBILE_HISTORY_CHUNK_SIZE) {
   tfMobileHistoryRenderLimit = TF_MOBILE_HISTORY_CHUNK_SIZE;
@@ -7621,7 +7673,7 @@ if (tfMobileHistoryRenderLimit > tfMobileHistoryTotalRows && tfMobileHistoryTota
   tfMobileHistoryRenderLimit = Math.max(TF_MOBILE_HISTORY_CHUNK_SIZE, tfMobileHistoryTotalRows);
 }
 
-tfMobileHistoryRowsCache = Array.isArray(rowsForUi) ? rowsForUi : [];
+tfMobileHistoryRowsCache = displayRows525;
 tfMobileHistoryRenderedStart = Math.max(
   0,
   tfMobileHistoryTotalRows - Math.min(tfMobileHistoryRenderLimit, tfMobileHistoryTotalRows)
@@ -7632,9 +7684,7 @@ tfMobileHistoryRenderContext = {
   riskMode
 };
 
-const tfMobileRowsForDom = Array.isArray(rowsForUi)
-  ? rowsForUi.slice(tfMobileHistoryRenderedStart)
-  : [];
+const tfMobileRowsForDom = displayRows525.slice(tfMobileHistoryRenderedStart);
 
 if (tfMobileHistoryRenderedStart === 0) {
 try {

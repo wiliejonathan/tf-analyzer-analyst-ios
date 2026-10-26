@@ -561,12 +561,14 @@ function tfMobileNormalizeHistoryV31(value){
   return src.map((row,idx)=>{
     if(!row||typeof row!=='object')return null;
     const out={...row};
+      const cancelled=row.isCancelled===true||/^cancelled$/i.test(String(row.status||row.tradeStatus||row.result||''));
+      if(cancelled){out.isCancelled=true;out.status='Cancelled';out.pips=null;}
     const analyst=String(row.analyst??row.analystName??row.name??row.channelName??row.trader??'').trim();
     const pair=String(row.pair??row.symbol??row.ticker??row.instrument??'').trim().toUpperCase();
     const pips=tfMobileFirstFiniteV31(row.pips,row.pnlPips,row.profitPips,row.resultPips,row.closedPips,row.pip,row.pipResult);
     if(analyst)out.analyst=analyst;
     if(pair)out.pair=pair;
-    if(pips!==null)out.pips=pips;
+    if(!cancelled&&pips!==null)out.pips=pips;
     if(out.displayDate==null||String(out.displayDate).trim()==='')out.displayDate=row.closedDate??row.closedAt??row.date??row.closeTime??'';
     if(out.createdDate==null||String(out.createdDate).trim()==='')out.createdDate=row.createdAt??'';
     if(out.openedDate==null||String(out.openedDate).trim()==='')out.openedDate=row.openedAt??row.opened_at_wib??row.openDate??row.entryTime??'';
@@ -576,7 +578,7 @@ function tfMobileNormalizeHistoryV31(value){
     if(!out.signalId&&row.id!=null)out.signalId=String(row.id);
     out.__tfMobileImportIndexV31=idx;
     return out;
-  }).filter(row=>row&&row.analyst&&row.pair&&Number.isFinite(Number(row.pips)));
+  }).filter(row=>row&&row.analyst&&row.pair&&(row.isCancelled||Number.isFinite(Number(row.pips))));
 }
 function tfMobileBuildSourcesFromHistoryV31(history,existing){
   const out=existing&&typeof existing==='object'&&!Array.isArray(existing)?clone(existing,{}):{};

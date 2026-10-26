@@ -30,7 +30,7 @@ let responsiveFrame=0,lastReportWidth519=document.documentElement.clientWidth;co
 document.addEventListener('pointerdown',e=>{if(!e.target.closest('.plot,.monthsvg svg,#dailyPerformance svg,.tip')){hideTip();document.querySelectorAll('.chart-crosshair').forEach(x=>x.style.display='none');document.querySelectorAll('.hour-crosshair').forEach(x=>x.hidden=true);}});
 
 window.__reportTest=()=>({state:{...state},rows:filtered.length,net:filtered.reduce((s,r)=>s+r.p,0),days:daily.size,hourCount:hours.reduce((s,h)=>s+h.count,0),profit:hours.reduce((s,h)=>s+h.profit,0),loss:hours.reduce((s,h)=>s+h.loss,0),pairs:[...new Set(filtered.map(r=>r.pair))]});
-/* REV524 full-trade report. Data and dollar PnL are supplied by the dashboard math bridge. */
+/* REV525 full-trade report. Data and dollar PnL are supplied by the dashboard math bridge. */
 let reportViewport=null;let reportConfig={balance:10000,risk:1,swapOn:false,swap:9.01,commOn:false,comm:20},configKey='',reportEmbedded=false,reportReady=false;
 function resultClass(v){return v>1e-9?'positive':v< -1e-9?'negative':'neutral';}
 function datum(r){return curveUnit==='usd'?r.u:r.p;}
@@ -62,7 +62,7 @@ if(window!==parent){reportEmbedded=true;parent.postMessage({type:'TF_ACTIVITY_RE
 
 function moveTip(e){const t=$('tooltip'),vp=reportViewport||{top:0,bottom:innerHeight,left:0,right:innerWidth},left=Math.max(8,vp.left+8),top=Math.max(8,vp.top+8),right=Math.max(left,vp.right-t.offsetWidth-8),bottom=Math.max(top,vp.bottom-t.offsetHeight-8);t.style.left=Math.min(Math.max(e.clientX+12,left),right)+'px';t.style.top=Math.min(Math.max(e.clientY+14,top),bottom)+'px';}
 
-// REV524: actual calendar-month returns plus recurrence across years.
+// REV525: actual calendar-month returns plus recurrence across years.
 function drawMonthPerformance(){
  const host=$('monthPerformance'),list=rawMonthList();let acc=0;
  const values=list.map(key=>{const rows=filtered.filter(r=>r[state.basis].startsWith(key)),net=rows.reduce((s,r)=>s+datum(r),0);acc+=net;return {key,rows,net,acc};});
