@@ -1,0 +1,39 @@
+name: Publish mobile REV521
+on:
+  push:
+    branches: [main]
+    paths: ['release-staging/REV521-mobile/READY']
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify mobile
+        run: |
+          set -euo pipefail
+          node --check assets/dashboard-mobile.js
+          node --check assets/tf-analyst-report.js
+          node --check mobile-license-gate.js
+          node --check service-worker.js
+          node --test tests/activation404.cjs tests/import407.cjs tests/risk433.cjs tests/performance406.cjs tests/equity412.cjs tests/animation414.cjs
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+          CI=1 TF_REV419_ROOT=. node tests/test-switch502.cjs
+          TF_REV419_ROOT=. node tests/test-stop502.cjs
+          CI=1 TF_REV419_ROOT=. node tests/test-lot510.cjs
+          CI=1 TF_REV419_ROOT=. node tests/test-viewer521.cjs
+          CI=1 TF_REV419_ROOT=. node tests/test-integration521.cjs
+          CI=1 TF_REV419_ROOT=. node tests/test-performance521.cjs
+          CI=1 TF_REV419_ROOT=. node tests/test-opened521.cjs
+      - name: Release browser package
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          zip -qr /tmp/TF_Analyzer_Analyst_iOS_BROWSER_REV521.zip . -x '.git/*' '.github/*' 'release-staging/*' 'node_modules/*' 'package-lock.json' 'package.json'
+          gh release create v1.18.34 /tmp/TF_Analyzer_Analyst_iOS_BROWSER_REV521.zip --title 'REV521 · Opened At history date column' --notes-file release-staging/REV521-mobile/RELEASE_NOTES.md

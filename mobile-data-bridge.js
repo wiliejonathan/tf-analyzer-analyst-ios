@@ -465,7 +465,7 @@ function completeness(it){
   // REV381: match PC REV379 combine/import precedence exactly. Extra Mobile-only
   // bookkeeping fields must never make a less-complete duplicate win.
   if(!it||typeof it!=="object")return 0;
-  const keys=["entry","takeProfit","stopLoss","type","createdDate","displayDate","signalId","expiredDate"];
+  const keys=["entry","takeProfit","stopLoss","type","createdDate","openedDate","displayDate","signalId","expiredDate"];
   let n=0;
   keys.forEach(k=>{const v=it[k];if(v!==null&&v!==undefined&&String(v).trim()!==""&&String(v).trim()!=="-")n++;});
   return n;
@@ -568,7 +568,9 @@ function tfMobileNormalizeHistoryV31(value){
     if(pair)out.pair=pair;
     if(pips!==null)out.pips=pips;
     if(out.displayDate==null||String(out.displayDate).trim()==='')out.displayDate=row.closedDate??row.closedAt??row.date??row.closeTime??'';
-    if(out.createdDate==null||String(out.createdDate).trim()==='')out.createdDate=row.createdAt??row.openedAt??row.openDate??row.entryTime??'';
+    if(out.createdDate==null||String(out.createdDate).trim()==='')out.createdDate=row.createdAt??'';
+    if(out.openedDate==null||String(out.openedDate).trim()==='')out.openedDate=row.openedAt??row.opened_at_wib??row.openDate??row.entryTime??'';
+    if(out.openedSortKey==null&&row.openedAt){const t=Date.parse(String(row.openedAt));if(Number.isFinite(t))out.openedSortKey=t;}
     if(out.sortKey==null&&row.closedAt){const t=Date.parse(String(row.closedAt));if(Number.isFinite(t))out.sortKey=t;}
     if(out.createdSortKey==null&&row.createdAt){const t=Date.parse(String(row.createdAt));if(Number.isFinite(t))out.createdSortKey=t;}
     if(!out.signalId&&row.id!=null)out.signalId=String(row.id);

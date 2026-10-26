@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'release-staging/**/READY'
+      - '!release-staging/REV521-mobile/**'
       - '!release-staging/REV511-mobile/**'
       - '!release-staging/REV512-mobile/**'
       - '!release-staging/REV514-mobile/**'

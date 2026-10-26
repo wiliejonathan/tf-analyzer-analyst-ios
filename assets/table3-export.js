@@ -74,6 +74,7 @@ document.body.innerHTML = `
 
   const ALL_COLUMNS = [
     { key: 'created', header: 'Tanggal (Created At)', weight: 15 },
+    { key: 'opened', header: 'Tanggal (Opened At)', weight: 15 },
     { key: 'closed', header: 'Tanggal (Closed At)', weight: 15 },
     { key: 'analyst', header: 'Nama Analis', weight: 13 },
     { key: 'balance', header: 'Balance', weight: 10 },
@@ -156,6 +157,7 @@ document.body.innerHTML = `
 
     return {
       created: { text: createdAt, cls: 'mono' },
+      opened: { text: esc(r.openedDate || '—'), cls: 'mono' },
       closed: { text: closedAt, cls: 'mono' },
       analyst: { text: analyst, cls: '' },
       balance: { text: fmtMoney(balanceBase), cls: 'mono' },
