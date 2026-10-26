@@ -2304,6 +2304,8 @@ function setSelectedSlTypeForAnalyst(analystName, pair, type) {
 if (!analystName)
 return;
 const key = tf_makeAnalystPairKey(analystName, pair);
+const next523 = type === 'fixed' || type === 'avg' ? type : null;
+if (next523 ? slTypeSelectionByAnalyst[key] === next523 : !Object.prototype.hasOwnProperty.call(slTypeSelectionByAnalyst, key)) return;
 if (type === 'fixed' || type === 'avg') {
 slTypeSelectionByAnalyst[key] = type;
 }
@@ -4716,16 +4718,17 @@ textNodes.forEach((n)=>{ try { n.remove(); } catch (e) { if (n.parentNode) n.par
 return target;
 } catch (e) { return null; }
 }
+function tf_setInlineRiskColor523(style,color){const normalized=({'#ef4444':'rgb(239, 68, 68)','#facc15':'rgb(250, 204, 21)','#22c55e':'rgb(34, 197, 94)'})[color]||color;if(style&&(style.getPropertyValue('color')!==normalized||style.getPropertyPriority('color')!=='important'))style.setProperty('color',color,'important');}
 function tf_forceLatestRiskTextColor(el, st) {
 try {
 if (!el || !st) return;
 try { tf_ensureAnalystNameColorTarget(el); } catch (e) { }
 const color = st.severity >= 2 ? '#ef4444' : (st.severity === 1 ? '#facc15' : '#22c55e');
-el.style && el.style.setProperty('color', color, 'important');
+tf_setInlineRiskColor523(el.style,color);
 if (el.querySelectorAll) {
 el.querySelectorAll('*').forEach((child) => {
 if (!child || (child.matches && child.matches('[data-tf-latest-risk-icon="1"], [data-tf-latest-risk-icon="1"] *'))) return;
-if (child.style) child.style.setProperty('color', color, 'important');
+tf_setInlineRiskColor523(child.style,color);
 });
 }
 }
@@ -4844,7 +4847,7 @@ try {
 let timer=null;const roots=new Set();
 const selector='#summary-table,#monthly-table,#history-table,#drawdown-table,.tf-score-analyst,.tf-holding-analyst,.tf-perf-name-text,.analyst-filter-name,.tf-isignal-analyst-name,.tf-users-analyst-link';
 const flush=()=>{timer=null;const pending=Array.from(roots);roots.clear();colorObserver.disconnect();try{for(const root of pending){if(root.isConnected!==false)tf_colorEveryRenderedAnalystName(root.matches&&root.matches(selector)?(root.parentElement||root):root);}}finally{colorObserver.observe(document.documentElement,{childList:true,subtree:true});}};
-const schedule=root=>{roots.add(root);if(!timer)timer=setTimeout(flush,100);};
+const schedule=root=>{const table=root.closest?.('#summary-table,#monthly-table,#history-table,#drawdown-table');roots.add(table||root);if(!timer)timer=setTimeout(flush,100);};
 const colorObserver=new MutationObserver(records=>{for(const record of records)for(const node of record.addedNodes||[]){if(node.nodeType!==1||node.matches('[data-tf-latest-risk-icon],.tf-analyst-name-color-target'))continue;if(node.matches(selector)||node.querySelector(selector))schedule(node);else if(node.matches('tr,tbody')&&node.closest('#summary-table,#monthly-table,#history-table,#drawdown-table'))schedule(node);}});
 colorObserver.observe(document.documentElement,{childList:true,subtree:true});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>schedule(document),{once:true});else schedule(document);

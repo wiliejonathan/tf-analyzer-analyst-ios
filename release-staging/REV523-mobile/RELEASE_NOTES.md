@@ -1,0 +1,11 @@
+REV523 / v1.18.36 — reduce low-end dashboard rendering work without page buttons
+
+The continuous History table initially creates the newest 100 DOM rows for histories above 300 rows. Scrolling upward automatically prepends older rows in chronological order and preserves the scroll anchor. There are no Previous/Next buttons or page selectors. All rows remain in memory for risk/PnL/lot/equity calculations, eligibility/select-all and exports from the outset. Browsing older history does not recompute the dashboard. Already loaded ranges survive recalculation for unchanged history. Filtering/data replacement resets the range safely. Before printing the native dashboard, all history rows are materialized. Mobile retains its existing automatic continuous loading.
+
+Selecting an already active SL mode no longer rewrites all settings to localStorage repeatedly. Actual SL changes still save synchronously and the existing Balance/Risk/cost synchronization is retained. Reapplying an unchanged analyst text color no longer writes the same inline styles again. Risk state changes still update colors, and icon colors remain independent. Table mutation recoloring is batched by table rather than scheduling hundreds of row scans. Colors and financial rules are preserved.
+
+Retains Opened At scanning and hidden-by-default visibility, all CSV/Excel/PDF/JSON fields, complete-data math, existing filters, checkboxes and report graphs.
+
+Validation includes automatic loading of all 600 trades without buttons, unchanged complete-data math during scrolling, off-screen eligibility, row toggles, print preparation, stale scroll/data replacement, idempotent color updates, actual risk color changes, unchanged-SL writes eliminated and real SL changes persisted. CPU slowdown benchmarks are synthetic local measurements; actual performance varies with laptop and dataset.
+
+Synthetic full-data math comparison, 6,000 trades and 4x CPU slowdown: Table 3 update measured 14.335s before and 0.712s after. Row IDs, PnL, lot and running balances produced identical SHA-256 digests. Initial DOM history rows fell from 6,000 to 100; all 6,000 rows remain in calculation/export data. Measurements vary across hardware and runs.
