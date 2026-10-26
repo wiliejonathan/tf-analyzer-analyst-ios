@@ -1,6 +1,6 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('fs'),vm=require('vm');
 const source=fs.readFileSync(process.env.TF_RISK_SOURCE||'assets/dashboard-mobile.js','utf8');
-const code=source.slice(source.indexOf('let __tfLatestRiskState'),source.indexOf('function tf_latestRiskReason'));
+const code=source.slice(source.indexOf('function tf_isCancelled525('),source.indexOf('function tf_setupCancelled525('))+source.slice(source.indexOf('let __tfLatestRiskState'),source.indexOf('function tf_latestRiskReason'));
 function setup(rows){const c={window:{},historySignals:rows.map(([date,pips,analyst='A',pair='XAUUSD'])=>({sortKey:Date.parse(date+'T12:00:00Z'),pips,analyst,pair}))};vm.createContext(c);vm.runInContext(code,c);return c;}
 function fixture(count,size=10){const rows=Array.from({length:10},(_,i)=>['2026-01-'+String(i+1).padStart(2,'0'),-100]);rows.push(['2026-02-01',2000]);for(let i=0;i<count;i++)rows.push(['2026-08-'+String(i+1).padStart(2,'0'),-size]);rows.push(['2026-08-20',2000],['2026-09-01',100,'B']);return rows;}
 test('reference excludes newest four months; 13/10 is yellow, 14/10 red',()=>{let c=setup(fixture(13));let r=c.tf_getLatestRiskState('A','XAUUSD');assert.equal(r.baselineMaxLossStreak,10);assert.equal(r.baselineMaxDrawdownPips,1000);assert.equal(r.severity,1);c=setup(fixture(14));r=c.tf_getLatestRiskState('A','XAUUSD');assert.equal(r.severity,2);assert.equal(r.exceedsLossCount,true);});

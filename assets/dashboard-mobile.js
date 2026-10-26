@@ -4583,7 +4583,7 @@ result.forEach(g=>{
 
 function tf_refreshLatestRiskState(force) {
 try {
-const src = Array.isArray(historySignals) ? historySignals.filter(row => !tf_isCancelled525(row)) : [];
+const src = Array.isArray(historySignals) ? historySignals : [];
 if(!force && __tfRiskTaskReady && __tfRiskTaskSource===src && __tfRiskTaskLength===src.length)return __tfLatestRiskState;
 __tfRiskTaskSource=src;__tfRiskTaskLength=src.length;__tfRiskTaskReady=true;
 Promise.resolve().then(()=>{__tfRiskTaskReady=false;});
@@ -4591,7 +4591,7 @@ let maxTs = null;
 let fingerprint=2166136261;
 for (let i = 0; i < src.length; i++) {
 const r = src[i];
-if (!r || r.isWithdraw || !String(r.analyst || '').trim() || !String(r.pair || '').trim()) continue;
+if (!r || tf_isCancelled525(r) || r.isWithdraw || !String(r.analyst || '').trim() || !String(r.pair || '').trim()) continue;
 const value=JSON.stringify([r.analyst,r.pair,r.pips,r.sortKey,r.displayDate,r.closedDate,r.createdDate]);
 for(let j=0;j<value.length;j++) fingerprint=Math.imul(fingerprint^value.charCodeAt(j),16777619);
 const ts = tf_latestRiskRowTs(r);
@@ -4610,7 +4610,7 @@ const groups = new Map();
 if (latestMonth) {
 for (let i = 0; i < src.length; i++) {
 const r = src[i];
-if (!r || r.isWithdraw) continue;
+if (!r || tf_isCancelled525(r) || r.isWithdraw) continue;
 const analyst = String(r.analyst || '').trim();
 const pair = tf_latestRiskNormPair(r.pair);
 if (!analyst || !pair) continue;
@@ -4669,7 +4669,7 @@ byAnalyst.set(key,{analyst:st.analyst,monthKey:latestMonth,drawdown,consecutiveL
 });
 for (let i = 0; i < src.length; i++) {
 const r = src[i];
-if (!r || r.isWithdraw) continue;
+if (!r || tf_isCancelled525(r) || r.isWithdraw) continue;
 const analyst = String(r.analyst || '').trim();
 if (!analyst) continue;
 const key = tf_latestRiskNormAnalyst(analyst);

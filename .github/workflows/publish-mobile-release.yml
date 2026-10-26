@@ -6,6 +6,7 @@ on:
     paths:
       - 'release-staging/**/READY'
       - '!release-staging/REV525-mobile/**'
+      - '!release-staging/REV525-mobile/**'
       - '!release-staging/REV524-mobile/**'
       - '!release-staging/REV523-mobile/**'
       - '!release-staging/REV522-mobile/**'
